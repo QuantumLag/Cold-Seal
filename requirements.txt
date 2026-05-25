@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+web3
+py-solc-x
+pyserial
+jinja2
+numpy
+pandas
+scikit-learn
+joblib

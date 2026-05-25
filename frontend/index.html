@@ -1,0 +1,1843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Immutable Cold Chain - Vaccine Integrity Monitor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --white: #FFFFFF;
+            --off-white: #F5F9F6;
+            --forest: #1A6B3C;
+            --mint: #2ECC71;
+            --emerald: #A8F0C6;
+            --amber: #F59E0B;
+            --crimson: #DC2626;
+            --grey: #9CA3AF;
+            --dark-grey: #4B5563;
+            --light-grey: #E5E7EB;
+            --terminal-bg: #0D1F14;
+            --mono: 'IBM Plex Mono', monospace;
+            --sans: 'Syne', sans-serif;
+        }
+
+        html, body {
+            background: var(--white);
+            color: var(--dark-grey);
+            font-family: var(--sans);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* ==================== SECTION 1: HEADER ==================== */
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2.5rem 4rem;
+            border-bottom: 3px solid var(--forest);
+            background: var(--off-white);
+            animation: fadeInDown 0.5s ease;
+        }
+
+        .header-left h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--forest);
+            letter-spacing: -0.5px;
+            margin-bottom: 0.3rem;
+        }
+
+        .header-tagline {
+            font-size: 0.9rem;
+            color: var(--grey);
+            font-family: var(--mono);
+            font-weight: 500;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 1.5rem;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1rem;
+            background: var(--white);
+            border: 2px solid var(--light-grey);
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            font-family: var(--mono);
+            letter-spacing: 0.3px;
+            transition: all 0.3s ease;
+        }
+
+        .status-pill.active {
+            border-color: var(--mint);
+            background: rgba(46, 204, 113, 0.05);
+            color: var(--forest);
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--grey);
+            animation: pulse 2s infinite;
+        }
+
+        .status-pill.active .status-dot {
+            background: var(--mint);
+            box-shadow: 0 0 6px var(--mint);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ==================== SECTION 2: INTEGRITY HERO ==================== */
+        .integrity-section {
+            padding: 3rem 4rem;
+            background: var(--white);
+            animation: slideUp 0.6s ease 0.1s both;
+        }
+
+        .integrity-hero {
+            background: var(--off-white);
+            border: 2px solid var(--light-grey);
+            border-radius: 12px;
+            padding: 3rem;
+            position: relative;
+        }
+
+        .integrity-header {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--forest);
+            margin-bottom: 2rem;
+            letter-spacing: 0.5px;
+        }
+
+        .integrity-container {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 3rem;
+            align-items: center;
+        }
+
+        .integrity-gauge-wrap {
+            text-align: center;
+        }
+
+        .integrity-gauge {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto;
+        }
+
+        .gauge-bg {
+            fill: none;
+            stroke: var(--light-grey);
+            stroke-width: 12;
+        }
+
+        .gauge-arc {
+            fill: none;
+            stroke: var(--mint);
+            stroke-width: 12;
+            stroke-linecap: round;
+            stroke-dasharray: 314.16;
+            transition: stroke-dashoffset 0.8s ease, stroke 0.3s ease;
+            transform-origin: 50% 50%;
+        }
+
+        .gauge-arc.amber {
+            stroke: var(--amber);
+        }
+
+        .gauge-arc.critical {
+            stroke: var(--crimson);
+        }
+
+        .gauge-arc.flash {
+            animation: redFlash 0.4s ease;
+        }
+
+        @keyframes redFlash {
+            0%, 100% { stroke: var(--crimson); }
+            50% { stroke: rgba(220, 38, 38, 0.3); }
+        }
+
+        .gauge-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            width: 180px;
+        }
+
+        .gauge-value {
+            font-size: 3rem;
+            font-weight: 700;
+            font-family: var(--mono);
+            color: var(--forest);
+            counter-increment: none;
+        }
+
+        .gauge-label {
+            font-size: 0.85rem;
+            color: var(--grey);
+            margin-top: 0.3rem;
+        }
+
+        .integrity-info {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .breach-counter {
+            background: var(--white);
+            border: 2px solid var(--light-grey);
+            border-radius: 8px;
+            padding: 1.2rem;
+            text-align: center;
+        }
+
+        .breach-counter-label {
+            font-size: 0.8rem;
+            color: var(--grey);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 0.5rem;
+        }
+
+        .breach-counter-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            font-family: var(--mono);
+            color: var(--crimson);
+        }
+
+        .score-history-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--forest);
+            margin-top: 0.5rem;
+            letter-spacing: 0.3px;
+        }
+
+        .score-sparkline {
+            width: 100%;
+            height: 80px;
+            margin-top: 0.8rem;
+            background: var(--white);
+            border-radius: 6px;
+            border: 1px solid var(--light-grey);
+        }
+
+        .integrity-breach-banner {
+            display: none;
+            background: rgba(220, 38, 38, 0.08);
+            border: 2px solid var(--crimson);
+            border-radius: 8px;
+            padding: 1rem;
+            color: var(--crimson);
+            font-weight: 600;
+            text-align: center;
+            margin-top: 1rem;
+            animation: slideDown 0.3s ease;
+        }
+
+        .integrity-breach-banner.show {
+            display: block;
+            animation: slidePulse 2s infinite;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slidePulse {
+            0%, 100% { opacity: 1; background: rgba(220, 38, 38, 0.08); }
+            50% { opacity: 0.6; background: rgba(220, 38, 38, 0.15); }
+        }
+
+        /* ==================== SECTION 3: SENSOR ROW ==================== */
+        .sensor-section {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 2rem;
+            padding: 2rem 4rem;
+            background: var(--off-white);
+            animation: slideUp 0.6s ease 0.2s both;
+        }
+
+        .sensor-card {
+            background: var(--white);
+            border: 2px solid var(--light-grey);
+            border-radius: 12px;
+            padding: 1.8rem;
+            transition: all 0.3s ease;
+        }
+
+        .sensor-card.glow {
+            animation: cardGlow 3s ease-in-out infinite;
+        }
+
+        @keyframes cardGlow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
+            50% { box-shadow: 0 0 12px 2px rgba(46, 204, 113, 0.3); }
+        }
+
+        .sensor-card.breach {
+            border-color: var(--crimson);
+            background: rgba(220, 38, 38, 0.02);
+            animation: breachPulse 1s infinite;
+        }
+
+        @keyframes breachPulse {
+            0%, 100% { border-color: var(--crimson); }
+            50% { border-color: rgba(220, 38, 38, 0.4); }
+        }
+
+        .sensor-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--grey);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 0.8rem;
+        }
+
+        .sensor-gauge {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 1rem;
+        }
+
+        .temp-display {
+            font-size: 2.2rem;
+            font-family: var(--mono);
+            font-weight: 700;
+            color: var(--forest);
+            text-align: center;
+            margin: 1rem 0;
+        }
+
+        .temp-display.breach {
+            color: var(--crimson);
+            animation: blink 0.5s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .temp-unit {
+            font-size: 0.9rem;
+            color: var(--grey);
+        }
+
+        .temp-status {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-align: center;
+            margin-top: 0.8rem;
+            padding: 0.5rem;
+            border-radius: 4px;
+        }
+
+        .temp-status.safe {
+            color: var(--mint);
+            background: rgba(46, 204, 113, 0.08);
+        }
+
+        .temp-status.breach {
+            color: var(--crimson);
+            background: rgba(220, 38, 38, 0.08);
+        }
+
+        .breach-risk-bar {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--light-grey);
+        }
+
+        .breach-risk-label {
+            font-size: 0.75rem;
+            color: var(--grey);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .breach-risk-container {
+            background: var(--light-grey);
+            border-radius: 3px;
+            height: 6px;
+            overflow: hidden;
+        }
+
+        .breach-risk-fill {
+            height: 100%;
+            background: var(--mint);
+            transition: width 0.3s ease, background 0.3s ease;
+        }
+
+        .breach-risk-fill.amber {
+            background: var(--amber);
+        }
+
+        .breach-risk-fill.critical {
+            background: var(--crimson);
+        }
+
+        .breach-risk-value {
+            font-size: 0.75rem;
+            font-family: var(--mono);
+            color: var(--forest);
+            font-weight: 600;
+            margin-top: 0.3rem;
+        }
+
+        #map {
+            width: 100%;
+            height: 280px;
+            border-radius: 8px;
+            margin-bottom: 0.8rem;
+            z-index: 1;
+        }
+
+        .gps-coords {
+            font-size: 0.75rem;
+            font-family: var(--mono);
+            color: var(--dark-grey);
+            text-align: center;
+            word-break: break-all;
+        }
+
+        .chain-stats-list {
+            font-size: 0.85rem;
+            color: var(--dark-grey);
+            line-height: 1.8;
+        }
+
+        .chain-stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.4rem 0;
+            border-bottom: 1px solid var(--light-grey);
+        }
+
+        .chain-stat-label {
+            font-weight: 600;
+            color: var(--grey);
+        }
+
+        .chain-stat-value {
+            font-family: var(--mono);
+            font-weight: 600;
+            color: var(--forest);
+        }
+
+        .chain-stat:last-child {
+            border-bottom: none;
+        }
+
+        .chain-icon-pulse {
+            display: inline-block;
+            font-size: 1rem;
+            margin-left: 0.3rem;
+            animation: iconPulse 1s infinite;
+        }
+
+        @keyframes iconPulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        /* ==================== SECTION 4: TEMPERATURE TIMELINE ==================== */
+        .timeline-section {
+            padding: 2rem 4rem;
+            background: var(--white);
+            animation: slideUp 0.6s ease 0.3s both;
+        }
+
+        .timeline-card {
+            background: var(--off-white);
+            border: 2px solid var(--light-grey);
+            border-radius: 12px;
+            padding: 2rem;
+        }
+
+        .timeline-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--forest);
+            margin-bottom: 1.5rem;
+            letter-spacing: 0.5px;
+        }
+
+        .timeline-chart {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            background: var(--white);
+            border-radius: 8px;
+            border: 1px solid var(--light-grey);
+            overflow: hidden;
+        }
+
+        .timeline-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .safe-zone {
+            fill: rgba(46, 204, 113, 0.15);
+        }
+
+        .timeline-grid {
+            stroke: var(--light-grey);
+            stroke-width: 0.5;
+        }
+
+        .timeline-line {
+            fill: none;
+            stroke: var(--forest);
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .timeline-line.breach {
+            stroke: var(--crimson);
+        }
+
+        .timeline-breach-line {
+            stroke: var(--crimson);
+            stroke-width: 1;
+            stroke-dasharray: 3,3;
+        }
+
+        /* ==================== SECTION 5: TERMINAL ==================== */
+        .terminal-section {
+            padding: 2rem 4rem;
+            background: var(--off-white);
+            animation: slideUp 0.6s ease 0.4s both;
+        }
+
+        .terminal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .terminal-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--forest);
+            letter-spacing: 0.5px;
+        }
+
+        .terminal-export-btn {
+            background: var(--mint);
+            border: none;
+            color: var(--white);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            cursor: pointer;
+            font-family: var(--sans);
+            transition: all 0.3s ease;
+        }
+
+        .terminal-export-btn:hover {
+            background: var(--forest);
+            transform: translateY(-2px);
+        }
+
+        .terminal-container {
+            background: var(--terminal-bg);
+            border: 2px solid var(--forest);
+            border-radius: 8px;
+            padding: 1rem;
+            max-height: 350px;
+            overflow-y: auto;
+            font-family: var(--mono);
+            font-size: 0.8rem;
+            color: var(--mint);
+            position: relative;
+        }
+
+        .terminal-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .terminal-container::-webkit-scrollbar-track {
+            background: rgba(46, 204, 113, 0.1);
+        }
+
+        .terminal-container::-webkit-scrollbar-thumb {
+            background: var(--mint);
+            border-radius: 3px;
+        }
+
+        .terminal-line {
+            padding: 0.4rem 0;
+            border-left: 2px solid var(--mint);
+            padding-left: 0.6rem;
+            animation: slideInLeft 0.3s ease;
+            color: var(--mint);
+            line-height: 1.4;
+        }
+
+        .terminal-line.breach {
+            border-left-color: var(--crimson);
+            color: var(--crimson);
+        }
+
+        @keyframes slideInLeft {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .terminal-empty {
+            text-align: center;
+            color: var(--grey);
+            padding: 2rem;
+            font-size: 0.85rem;
+        }
+
+        .terminal-resume-btn {
+            position: absolute;
+            bottom: 1rem;
+            right: 1rem;
+            background: var(--mint);
+            border: none;
+            color: var(--terminal-bg);
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: var(--mono);
+            display: none;
+        }
+
+        .terminal-resume-btn.show {
+            display: block;
+        }
+
+        /* ==================== SECTION 6: BLOCKCHAIN LEDGER ==================== */
+        .ledger-section {
+            padding: 2rem 4rem;
+            background: var(--white);
+            animation: slideUp 0.6s ease 0.5s both;
+        }
+
+        .ledger-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--forest);
+            margin-bottom: 0.3rem;
+            letter-spacing: 0.5px;
+            border-left: 4px solid var(--forest);
+            padding-left: 1rem;
+        }
+
+        .ledger-subtitle {
+            font-size: 0.8rem;
+            color: var(--grey);
+            margin-bottom: 1.5rem;
+            padding-left: 1rem;
+        }
+
+        .ledger-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--off-white);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid var(--light-grey);
+            font-size: 0.85rem;
+        }
+
+        .ledger-table thead {
+            background: var(--white);
+            border-bottom: 2px solid var(--forest);
+        }
+
+        .ledger-table th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 700;
+            color: var(--forest);
+            font-family: var(--mono);
+            font-size: 0.75rem;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+        }
+
+        .ledger-table td {
+            padding: 0.9rem 1rem;
+            border-bottom: 1px solid var(--light-grey);
+            font-family: var(--mono);
+            color: var(--dark-grey);
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .ledger-table tbody tr {
+            transition: all 0.2s ease;
+        }
+
+        .ledger-table tbody tr:hover {
+            background: rgba(26, 107, 60, 0.04);
+        }
+
+        .ledger-table tbody tr.new-breach {
+            animation: breachFlash 0.5s ease;
+        }
+
+        @keyframes breachFlash {
+            0%, 100% { background: var(--white); }
+            50% { background: rgba(220, 38, 38, 0.1); }
+        }
+
+        .ledger-badge {
+            display: inline-block;
+            background: rgba(46, 204, 113, 0.15);
+            color: var(--mint);
+            padding: 0.3rem 0.6rem;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.2px;
+        }
+
+        .ledger-empty {
+            text-align: center;
+            padding: 3rem;
+            color: var(--grey);
+        }
+
+        .ledger-empty-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        /* ==================== SECTION 7: FOOTER STATS ==================== */
+        .stats-footer {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            background: var(--forest);
+            color: var(--white);
+            padding: 2rem 4rem;
+            gap: 0;
+            text-align: center;
+            animation: slideUp 0.6s ease 0.6s both;
+        }
+
+        .stats-footer > div {
+            padding: 1.5rem;
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .stats-footer > div:last-child {
+            border-right: none;
+        }
+
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            font-family: var(--mono);
+            margin-bottom: 0.4rem;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            opacity: 0.9;
+        }
+
+        /* ==================== TOAST NOTIFICATION ==================== */
+        .toast {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: var(--white);
+            border: 2px solid var(--crimson);
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            color: var(--crimson);
+            font-weight: 600;
+            font-family: var(--mono);
+            font-size: 0.85rem;
+            animation: slideInRight 0.3s ease, slideOutRight 0.3s ease 3.7s;
+            z-index: 1000;
+        }
+
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes slideOutRight {
+            from { opacity: 1; transform: translateX(0); }
+            to { opacity: 0; transform: translateX(20px); }
+        }
+
+        .humidity-sparkline {
+            width: 100%;
+            height: 40px;
+            margin-top: 0.6rem;
+        }
+
+        .humidity-not-logged {
+            font-size: 0.7rem;
+            color: var(--grey);
+            margin-top: 0.5rem;
+            font-style: italic;
+        }
+
+        /* ==================== ANIMATIONS ==================== */
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ==================== RESPONSIVE ==================== */
+        @media (max-width: 1024px) {
+            .integrity-container {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .sensor-section {
+                grid-template-columns: 1fr;
+                padding: 2rem;
+            }
+
+            .stats-footer {
+                grid-template-columns: repeat(2, 1fr);
+                padding: 1.5rem;
+            }
+
+            .stats-footer > div {
+                border-right: none;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            }
+
+            .stats-footer > div:nth-child(2n) {
+                border-right: 1px solid rgba(255, 255, 255, 0.2);
+            }
+
+            .stats-footer > div:nth-child(3),
+            .stats-footer > div:nth-child(4) {
+                border-bottom: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header-section {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+                padding: 1.5rem;
+            }
+
+            .header-right {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .integrity-section,
+            .sensor-section,
+            .terminal-section,
+            .timeline-section,
+            .ledger-section {
+                padding: 1.5rem;
+            }
+
+            .integrity-hero {
+                padding: 1.5rem;
+            }
+
+            .sensor-section {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-footer {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-footer > div {
+                border: none;
+                padding: 1rem;
+            }
+
+            .timeline-chart {
+                height: 200px;
+            }
+
+            .terminal-container {
+                max-height: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ==================== SECTION 1: HEADER ==================== -->
+<section class="header-section">
+    <div class="header-left">
+        <h1>THE IMMUTABLE COLD CHAIN</h1>
+        <div class="header-tagline">🔒 Temperature-verified. Blockchain-anchored. Non-repudiable.</div>
+    </div>
+    <div class="header-right">
+        <div class="status-pill" id="statusWS">
+            <span class="status-dot"></span>
+            WEBSOCKET
+        </div>
+        <div class="status-pill" id="statusChain">
+            <span class="status-dot"></span>
+            CHAIN
+        </div>
+        <div class="status-pill" id="statusGPS">
+            <span class="status-dot"></span>
+            GPS
+        </div>
+    </div>
+</section>
+
+<!-- ==================== SECTION 2: INTEGRITY HERO ==================== -->
+<section class="integrity-section">
+    <div class="integrity-hero">
+        <div class="integrity-header">📊 INTEGRITY SCORE — THE CORE METRIC</div>
+        
+        <div class="integrity-container">
+            <!-- Left: Gauge -->
+            <div class="integrity-gauge-wrap">
+                <svg class="integrity-gauge" viewBox="0 0 150 150">
+                    <circle class="gauge-bg" cx="75" cy="75" r="50"></circle>
+                    <circle class="gauge-arc" id="integrityArc" cx="75" cy="75" r="50"></circle>
+                </svg>
+                <div class="gauge-text">
+                    <div class="gauge-value" id="integrityValue">--</div>
+                    <div class="gauge-label">%</div>
+                </div>
+            </div>
+
+            <!-- Right: Info Column -->
+            <div class="integrity-info">
+                <div class="breach-counter">
+                    <div class="breach-counter-label">Breach Events Logged</div>
+                    <div class="breach-counter-value" id="breachCounter">0</div>
+                </div>
+
+                <div>
+                    <div class="score-history-title">📈 SCORE HISTORY (Last 30)</div>
+                    <svg class="score-sparkline" id="sparklineSVG" viewBox="0 0 300 80">
+                        <polyline id="sparklinePolyline" points="" fill="none" stroke="var(--forest)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="integrity-breach-banner" id="integrityBreach">
+            ⚠️ INTEGRITY COMPROMISED — BATCH FLAGGED FOR ALTERNATIVE USE
+        </div>
+    </div>
+</section>
+
+<!-- ==================== SECTION 3: SENSOR ROW ==================== -->
+<section class="sensor-section">
+    <!-- Card 1: Temperature -->
+    <div class="sensor-card" id="tempCard">
+        <div class="sensor-label">🌡️ Live Temperature Gauge</div>
+        <svg class="sensor-gauge" id="tempGauge" viewBox="0 0 150 150">
+            <circle class="gauge-bg" cx="75" cy="75" r="50"></circle>
+            <circle class="gauge-arc" id="tempArc" cx="75" cy="75" r="50"></circle>
+        </svg>
+        <div class="temp-display" id="tempDisplay">--</div>
+        <div class="temp-unit">°C</div>
+        <div class="temp-status safe" id="tempStatus">✓ IN RANGE</div>
+        
+        <div class="breach-risk-bar">
+            <div class="breach-risk-label">BREACH RISK TO THRESHOLD</div>
+            <div class="breach-risk-container">
+                <div class="breach-risk-fill" id="breachRiskFill"></div>
+            </div>
+            <div class="breach-risk-value" id="breachRiskValue">0%</div>
+        </div>
+    </div>
+
+    <!-- Card 2: Humidity -->
+    <div class="sensor-card" id="humidityCard">
+        <div class="sensor-label">💧 Humidity Monitor</div>
+        <svg class="sensor-gauge" id="humidityGauge" viewBox="0 0 150 150">
+            <circle class="gauge-bg" cx="75" cy="75" r="50"></circle>
+            <circle class="gauge-arc" id="humidityArc" cx="75" cy="75" r="50"></circle>
+        </svg>
+        <div class="temp-display" id="humidityDisplay">--</div>
+        <div class="temp-unit">% RH</div>
+        <div class="temp-status safe" id="humidityStatus">✓ OPTIMAL</div>
+        
+        <svg class="humidity-sparkline" id="humiditySparkline" viewBox="0 0 200 40">
+            <polyline id="humiditySparklinePolyline" points="" fill="none" stroke="var(--amber)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+        </svg>
+        <div class="humidity-not-logged">⊘ Not chain-logged (intentional)</div>
+    </div>
+
+    <!-- Card 3: Chain Stats -->
+    <div class="sensor-card">
+        <div class="sensor-label">⛓️ BLOCKCHAIN STATS</div>
+        <div class="chain-stats-list">
+            <div class="chain-stat">
+                <span class="chain-stat-label">Total Logs</span>
+                <span class="chain-stat-value" id="logCount">0</span>
+            </div>
+            <div class="chain-stat">
+                <span class="chain-stat-label">Last Block</span>
+                <span class="chain-stat-value" id="lastBlockTime">--</span>
+            </div>
+            <div class="chain-stat">
+                <span class="chain-stat-label">Decay Rate</span>
+                <span class="chain-stat-value">0.3% <span class="chain-icon-pulse">⛓️</span></span>
+            </div>
+            <div class="chain-stat">
+                <span class="chain-stat-label">Write Type</span>
+                <span class="chain-stat-value">Breach-Only</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== SECTION 4: TEMPERATURE TIMELINE ==================== -->
+<section class="timeline-section">
+    <div class="timeline-card">
+        <div class="timeline-title">📈 LIVE TEMPERATURE TIMELINE</div>
+        <div class="timeline-chart">
+            <svg class="timeline-svg" id="timelineSVG" viewBox="0 0 800 300">
+                <!-- Safe zone band -->
+                <rect class="safe-zone" x="0" y="150" width="800" height="60"></rect>
+                <!-- Gridlines will be drawn here -->
+                <!-- Temperature line will be drawn here -->
+            </svg>
+        </div>
+    </div>
+</section>
+
+<!-- ==================== SECTION 5: TERMINAL ==================== -->
+<section class="terminal-section">
+    <div class="terminal-header">
+        <div class="terminal-title">▌ LIVE TELEMETRY STREAM</div>
+        <button class="terminal-export-btn" id="exportBtn">↓ Export CSV</button>
+    </div>
+    <div class="terminal-container" id="terminal">
+        <div class="terminal-empty">Awaiting WebSocket connection...</div>
+    </div>
+    <button class="terminal-resume-btn" id="resumeBtn">▼ Resume Live Feed</button>
+</section>
+
+<!-- ==================== SECTION 6: BLOCKCHAIN LEDGER ==================== -->
+<section class="ledger-section">
+    <div class="ledger-title">⛓️ IMMUTABLE BREACH LEDGER</div>
+    <div class="ledger-subtitle">"Only violations are written to chain. Gas-optimized."</div>
+    <table class="ledger-table">
+        <thead>
+            <tr>
+                <th>Log ID</th>
+                <th>Timestamp</th>
+                <th>Temperature (°C)</th>
+                <th>GPS Coordinates</th>
+                <th>Score After Breach</th>
+                <th>Chain Badge</th>
+            </tr>
+        </thead>
+        <tbody id="ledgerBody">
+            <tr>
+                <td colspan="6" class="ledger-empty">
+                    <div class="ledger-empty-icon">✅</div>
+                    <div>No violations recorded. The chain is clean.</div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</section>
+
+<!-- ==================== SECTION 7: FOOTER STATS ==================== -->
+<footer class="stats-footer">
+    <div>
+        <div class="stat-value" id="statTotal">0</div>
+        <div class="stat-label">Total Readings</div>
+    </div>
+    <div>
+        <div class="stat-value" id="statBreach">0</div>
+        <div class="stat-label">Breach Count</div>
+    </div>
+    <div>
+        <div class="stat-value" id="statIntegrity">--</div>
+        <div class="stat-label">Current Integrity</div>
+    </div>
+    <div>
+        <div class="stat-value" id="statGasSaved">0</div>
+        <div class="stat-label">Gas Writes Saved</div>
+    </div>
+</footer>
+
+<script>
+    /* ==================== CONFIG ==================== */
+    const CONFIG = {
+        WS_URL: 'ws://localhost:8000/ws',
+        API_BASE: 'http://localhost:8000',
+        TEMP_MIN_RAW: 20,    // 2.0°C
+        TEMP_MAX_RAW: 80,    // 8.0°C
+        TEMP_MIN: 2.0,
+        TEMP_MAX: 8.0,
+        POLL_INTERVAL: 30000,
+        WS_RECONNECT: 3000,
+    };
+
+    /* ==================== STATE ==================== */
+    let state = {
+        ws: null,
+        wsConnected: false,
+        chainConnected: false,
+        gpsConnected: false,
+        currentIntegrity: null,
+        currentTemp: null,
+        currentGPS: null,
+        currentHumidity: null,
+        totalReadings: 0,
+        breachCount: 0,
+        logCount: 0,
+        integrityHistory: [100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100],
+        humidityHistory: [55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55, 55],
+        tempHistory: [],
+        telemetryLog: [],
+        lastBlockTime: null,
+        map: null,
+        marker: null,
+        terminalPaused: false,
+        terminalScrollPos: 0,
+        lastLogCount: 0,
+        lastIntegrity: 100,
+    };
+
+    /* ==================== DOM CACHE ==================== */
+    const DOM = {
+        statusWS: document.getElementById('statusWS'),
+        statusChain: document.getElementById('statusChain'),
+        statusGPS: document.getElementById('statusGPS'),
+        integrityValue: document.getElementById('integrityValue'),
+        integrityArc: document.getElementById('integrityArc'),
+        integrityBreach: document.getElementById('integrityBreach'),
+        breachCounter: document.getElementById('breachCounter'),
+        sparklinePolyline: document.getElementById('sparklinePolyline'),
+        tempCard: document.getElementById('tempCard'),
+        tempDisplay: document.getElementById('tempDisplay'),
+        tempStatus: document.getElementById('tempStatus'),
+        tempArc: document.getElementById('tempArc'),
+        breachRiskFill: document.getElementById('breachRiskFill'),
+        breachRiskValue: document.getElementById('breachRiskValue'),
+        humidityCard: document.getElementById('humidityCard'),
+        humidityDisplay: document.getElementById('humidityDisplay'),
+        humidityStatus: document.getElementById('humidityStatus'),
+        humidityArc: document.getElementById('humidityArc'),
+        humiditySparklinePolyline: document.getElementById('humiditySparklinePolyline'),
+        gpsCoords: document.getElementById('gpsCoords'),
+        logCount: document.getElementById('logCount'),
+        lastBlockTime: document.getElementById('lastBlockTime'),
+        terminal: document.getElementById('terminal'),
+        exportBtn: document.getElementById('exportBtn'),
+        resumeBtn: document.getElementById('resumeBtn'),
+        ledgerBody: document.getElementById('ledgerBody'),
+        timelineSVG: document.getElementById('timelineSVG'),
+        statTotal: document.getElementById('statTotal'),
+        statBreach: document.getElementById('statBreach'),
+        statIntegrity: document.getElementById('statIntegrity'),
+        statGasSaved: document.getElementById('statGasSaved'),
+    };
+
+    /* ==================== UTILITIES ==================== */
+    function formatTimestamp(date) {
+        const pad = (n) => String(n).padStart(2, '0');
+        const h = date.getHours();
+        const m = date.getMinutes();
+        const s = date.getSeconds();
+        return `${pad(h)}:${pad(m)}:${pad(s)}`;
+    }
+
+    function formatDateFull(date) {
+        return date.toLocaleString();
+    }
+
+    function tempRawToC(raw) {
+        return raw / 10;
+    }
+
+    function updateStatus(field, active) {
+        if (field === 'ws') state.wsConnected = active;
+        if (field === 'chain') state.chainConnected = active;
+        if (field === 'gps') state.gpsConnected = active;
+
+        DOM.statusWS.classList.toggle('active', state.wsConnected);
+        DOM.statusChain.classList.toggle('active', state.chainConnected);
+        DOM.statusGPS.classList.toggle('active', state.gpsConnected);
+    }
+
+    function updateStats() {
+        DOM.statTotal.textContent = state.totalReadings;
+        DOM.statBreach.textContent = state.breachCount;
+        DOM.statIntegrity.textContent = state.currentIntegrity !== null ? state.currentIntegrity.toFixed(1) + '%' : '--';
+        DOM.statGasSaved.textContent = (state.totalReadings - state.breachCount);
+    }
+
+    /* ==================== TOAST NOTIFICATION ==================== */
+    function showToast(message) {
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 4000);
+    }
+
+    /* ==================== GAUGE INITIALIZATION & FIXES ==================== */
+    window.addEventListener('DOMContentLoaded', () => {
+        // Initialize Integrity Arc Gauge
+        const integrityCircle = document.getElementById('integrityArc');
+        const r = parseInt(integrityCircle.getAttribute('r'));
+        const circumference = 2 * Math.PI * r;
+        integrityCircle.style.strokeDasharray = circumference;
+        integrityCircle.style.strokeDashoffset = 0; // Full green arc = 100%
+        integrityCircle.style.stroke = '#1A6B3C';
+        integrityCircle.style.strokeWidth = '12';
+        integrityCircle.style.fill = 'none';
+        integrityCircle.style.strokeLinecap = 'round';
+        integrityCircle.style.transition = 'stroke-dashoffset 0.8s ease';
+    });
+
+    function initializeGauges() {
+        // Initialize Integrity Arc Gauge
+        const integrityRadius = 50;
+        const integrityCircumference = 2 * Math.PI * integrityRadius;
+        DOM.integrityArc.style.stroke = 'var(--mint)';
+        DOM.integrityArc.style.strokeWidth = '12';
+        DOM.integrityValue.textContent = '100.00%';
+
+        // Initialize Temperature Arc Gauge
+        const tempRadius = 50;
+        const tempCircumference = 2 * Math.PI * tempRadius;
+        DOM.tempArc.setAttribute('stroke-dasharray', tempCircumference);
+        DOM.tempArc.setAttribute('stroke-dashoffset', tempCircumference); // Start at 0%
+        DOM.tempArc.style.stroke = 'var(--light-grey)';
+        DOM.tempArc.style.strokeWidth = '12';
+        DOM.tempDisplay.textContent = '--';
+
+        // Initialize Humidity Arc Gauge
+        const humidityRadius = 50;
+        const humidityCircumference = 2 * Math.PI * humidityRadius;
+        DOM.humidityArc.setAttribute('stroke-dasharray', humidityCircumference);
+        DOM.humidityArc.setAttribute('stroke-dashoffset', humidityCircumference * 0.45); // Start at ~55%
+        DOM.humidityArc.style.stroke = 'var(--mint)';
+        DOM.humidityArc.style.strokeWidth = '12';
+        DOM.humidityDisplay.textContent = '--';
+
+        // Pre-populate sparklines with default data
+        updateSparkline();
+        updateHumiditySparkline();
+    }
+
+    function updateIntegrityGaugeWithBreach(score) {
+        const percentage = Math.max(0, Math.min(100, score));
+        const radius = 50;
+        const circumference = 2 * Math.PI * radius;
+        const offset = circumference - (percentage / 100) * circumference;
+
+        // Flash red briefly
+        DOM.integrityArc.classList.add('flash');
+        setTimeout(() => DOM.integrityArc.classList.remove('flash'), 400);
+
+        // Show toast
+        showToast(`⚠️ BREACH — Score decayed to ${percentage.toFixed(2)}%`);
+
+        // Animate gauge
+        DOM.integrityArc.style.strokeDashoffset = offset;
+
+        // Color code
+        DOM.integrityArc.classList.remove('amber', 'critical');
+        if (percentage >= 80) {
+            DOM.integrityArc.style.stroke = 'var(--mint)';
+        } else if (percentage >= 60) {
+            DOM.integrityArc.classList.add('amber');
+            DOM.integrityArc.style.stroke = 'var(--amber)';
+        } else {
+            DOM.integrityArc.classList.add('critical');
+            DOM.integrityArc.style.stroke = 'var(--crimson)';
+        }
+
+        DOM.integrityBreach.classList.toggle('show', percentage < 60);
+        state.currentIntegrity = percentage;
+        animateNumberCount(DOM.integrityValue, percentage, 1000);
+    }
+
+    /* ==================== GAUGE ANIMATIONS ==================== */
+    function updateIntegrityGauge(score, animate = false) {
+        const percentage = Math.max(0, Math.min(100, score));
+        const circumference = 2 * Math.PI * 50;
+        const offset = circumference - (percentage / 100) * circumference;
+
+        if (animate && state.currentIntegrity !== null) {
+            DOM.integrityArc.classList.add('flash');
+            setTimeout(() => DOM.integrityArc.classList.remove('flash'), 400);
+        }
+
+        DOM.integrityArc.style.strokeDashoffset = offset;
+
+        // Color coding
+        DOM.integrityArc.classList.remove('amber', 'critical');
+        if (percentage >= 80) {
+            DOM.integrityArc.style.stroke = 'var(--mint)';
+        } else if (percentage >= 60) {
+            DOM.integrityArc.classList.add('amber');
+            DOM.integrityArc.style.stroke = 'var(--amber)';
+        } else {
+            DOM.integrityArc.classList.add('critical');
+            DOM.integrityArc.style.stroke = 'var(--crimson)';
+        }
+
+        // Show breach banner if < 60%
+        DOM.integrityBreach.classList.toggle('show', percentage < 60);
+
+        state.currentIntegrity = percentage;
+        animateNumberCount(DOM.integrityValue, percentage, 1000);
+    }
+
+    function updateHumidityGauge(humidity) {
+        const percentage = Math.max(0, Math.min(100, humidity));
+        const radius = 50;
+        const circumference = 2 * Math.PI * radius;
+        const offset = circumference - (percentage / 100) * circumference;
+
+        DOM.humidityArc.style.strokeDashoffset = offset;
+        DOM.humidityDisplay.textContent = humidity.toFixed(1);
+        state.currentHumidity = humidity;
+
+        // Color coding: Safe zone 40-70%
+        const isOptimal = humidity >= 40 && humidity <= 70;
+        DOM.humidityStatus.textContent = isOptimal ? '✓ OPTIMAL' : '⚠ OUT OF RANGE';
+        DOM.humidityStatus.classList.toggle('safe', isOptimal);
+        DOM.humidityStatus.classList.toggle('breach', !isOptimal);
+
+        if (isOptimal) {
+            DOM.humidityArc.style.stroke = 'var(--mint)';
+        } else {
+            DOM.humidityArc.style.stroke = 'var(--amber)';
+        }
+    }
+
+    function updateTempGauge(tempC) {
+        if (tempC === null) {
+            const circumference = 2 * Math.PI * 50;
+            DOM.tempArc.style.strokeDashoffset = circumference;
+            return;
+        }
+
+        // Scale to 0-100% (0-12°C range)
+        const percentage = Math.max(0, Math.min(100, (tempC / 12) * 100));
+        const circumference = 2 * Math.PI * 50;
+        const offset = circumference - (percentage / 100) * circumference;
+        DOM.tempArc.style.strokeDashoffset = offset;
+
+        // Color based on safe zone
+        if (tempC >= CONFIG.TEMP_MIN && tempC <= CONFIG.TEMP_MAX) {
+            DOM.tempArc.style.stroke = 'var(--mint)';
+        } else if (tempC < CONFIG.TEMP_MIN || tempC > CONFIG.TEMP_MAX) {
+            DOM.tempArc.style.stroke = 'var(--crimson)';
+        } else {
+            DOM.tempArc.style.stroke = 'var(--amber)';
+        }
+    }
+
+    function animateNumberCount(element, targetValue, duration) {
+        const startValue = parseFloat(element.textContent) || 0;
+        const startTime = performance.now();
+
+        function frame(time) {
+            const elapsed = time - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const value = startValue + (targetValue - startValue) * progress;
+            element.textContent = value.toFixed(2) + '%';
+            if (progress < 1) requestAnimationFrame(frame);
+        }
+
+        requestAnimationFrame(frame);
+    }
+
+    function updateTempGauge(tempC) {
+        if (tempC === null) {
+            DOM.tempArc.style.strokeDashoffset = 314.16;
+            return;
+        }
+
+        // Scale to 0-100% (0-12°C range)
+        const percentage = Math.max(0, Math.min(100, (tempC / 12) * 100));
+        const circumference = 2 * Math.PI * 50;
+        const offset = circumference - (percentage / 100) * circumference;
+        DOM.tempArc.style.strokeDashoffset = offset;
+
+        // Color based on safe zone
+        if (tempC >= CONFIG.TEMP_MIN && tempC <= CONFIG.TEMP_MAX) {
+            DOM.tempArc.style.stroke = 'var(--mint)';
+        } else if (tempC < CONFIG.TEMP_MIN || tempC > CONFIG.TEMP_MAX) {
+            DOM.tempArc.style.stroke = 'var(--crimson)';
+        } else {
+            DOM.tempArc.style.stroke = 'var(--amber)';
+        }
+    }
+
+    /* ==================== TEMPERATURE LOGIC ==================== */
+    function calculateBreachRisk(tempC) {
+        let risk = 0;
+        if (tempC < CONFIG.TEMP_MIN) {
+            risk = Math.max(0, (CONFIG.TEMP_MIN - tempC) / CONFIG.TEMP_MIN * 100);
+        } else if (tempC > CONFIG.TEMP_MAX) {
+            risk = Math.max(0, (tempC - CONFIG.TEMP_MAX) / (20 - CONFIG.TEMP_MAX) * 100);
+        }
+        return Math.min(100, risk);
+    }
+
+    function updateTemperatureUI(tempC, isBreach) {
+        state.currentTemp = tempC;
+        DOM.tempDisplay.textContent = tempC.toFixed(1);
+        DOM.tempDisplay.classList.toggle('breach', isBreach);
+        DOM.tempStatus.textContent = isBreach ? '❌ BREACH DETECTED' : '✓ IN RANGE';
+        DOM.tempStatus.classList.toggle('safe', !isBreach);
+        DOM.tempStatus.classList.toggle('breach', isBreach);
+        DOM.tempCard.classList.toggle('breach', isBreach);
+
+        const riskPercent = calculateBreachRisk(tempC);
+        DOM.breachRiskValue.textContent = riskPercent.toFixed(0) + '%';
+        DOM.breachRiskFill.style.width = riskPercent + '%';
+        DOM.breachRiskFill.classList.remove('amber', 'critical');
+        if (riskPercent >= 90) DOM.breachRiskFill.classList.add('critical');
+        else if (riskPercent >= 70) DOM.breachRiskFill.classList.add('amber');
+
+        updateTempGauge(tempC);
+    }
+
+    /* ==================== SPARKLINE (INTEGRITY HISTORY) ==================== */
+    function updateSparkline() {
+        if (state.integrityHistory.length === 0) {
+            DOM.sparklinePolyline.setAttribute('points', '');
+            return;
+        }
+
+        const data = state.integrityHistory.slice(-30);
+        const svgHeight = 80;
+        const svgWidth = 300;
+        const points = data.map((v, i) => {
+            const x = (i / (data.length - 1 || 1)) * svgWidth;
+            const y = svgHeight - (v / 100) * svgHeight;  // 100% maps to top (y=0), 0% maps to bottom (y=80)
+            return `${x},${y}`;
+        }).join(' ');
+
+        DOM.sparklinePolyline.setAttribute('points', points);
+    }
+
+    function updateHumiditySparkline() {
+        if (state.humidityHistory.length === 0) {
+            DOM.humiditySparklinePolyline.setAttribute('points', '');
+            return;
+        }
+
+        const data = state.humidityHistory.slice(-20);
+        const minValue = 0;
+        const maxValue = 100;
+        const points = data.map((v, i) => {
+            const x = (i / (data.length - 1 || 1)) * 200;
+            const y = 40 - ((v - minValue) / (maxValue - minValue) * 40);
+            return `${x},${y}`;
+        }).join(' ');
+
+        DOM.humiditySparklinePolyline.setAttribute('points', points);
+    }
+
+    /* ==================== TEMPERATURE TIMELINE CHART ==================== */
+    function updateTimeline() {
+        const svg = DOM.timelineSVG;
+        const data = state.tempHistory.slice(-40);
+
+        if (data.length === 0) return;
+
+        // Clear old lines
+        const oldLines = svg.querySelectorAll('.timeline-line, .timeline-breach-line, circle');
+        oldLines.forEach(el => el.remove());
+
+        if (data.length < 2) return;
+
+        // Find min/max temp
+        const minTemp = Math.min(...data.map(d => d.temp), CONFIG.TEMP_MIN);
+        const maxTemp = Math.max(...data.map(d => d.temp), CONFIG.TEMP_MAX + 2);
+        const tempRange = maxTemp - minTemp || 1;
+
+        const width = 800;
+        const height = 300;
+        const pointSpacing = width / (data.length - 1);
+
+        // Draw safe zone band
+        const safeMinY = height - ((CONFIG.TEMP_MAX - minTemp) / tempRange * height);
+        const safeMaxY = height - ((CONFIG.TEMP_MIN - minTemp) / tempRange * height);
+
+        const safeZone = svg.querySelector('.safe-zone');
+        safeZone.setAttribute('y', safeMinY);
+        safeZone.setAttribute('height', safeMaxY - safeMinY);
+
+        // Build polyline for temperature line
+        let points = [];
+        data.forEach((d, i) => {
+            const x = i * pointSpacing;
+            const y = height - ((d.temp - minTemp) / tempRange * height);
+            points.push(`${x},${y}`);
+        });
+
+        const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+        polyline.setAttribute('points', points.join(' '));
+        polyline.setAttribute('class', 'timeline-line');
+        polyline.style.stroke = data.some(d => d.isBreach) ? 'var(--crimson)' : 'var(--forest)';
+        svg.appendChild(polyline);
+
+        // Draw data points
+        data.forEach((d, i) => {
+            const x = i * pointSpacing;
+            const y = height - ((d.temp - minTemp) / tempRange * height);
+
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', x);
+            circle.setAttribute('cy', y);
+            circle.setAttribute('r', '3');
+            circle.setAttribute('fill', d.isBreach ? 'var(--crimson)' : 'var(--mint)');
+            svg.appendChild(circle);
+
+            // Breach marker line
+            if (d.isBreach) {
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', x);
+                line.setAttribute('y1', 0);
+                line.setAttribute('x2', x);
+                line.setAttribute('y2', height);
+                line.setAttribute('class', 'timeline-breach-line');
+                svg.appendChild(line);
+            }
+        });
+    }
+
+    /* ==================== TERMINAL ==================== */
+    function addTerminalLine(tempC, humidity, gps, integrity, isBreach) {
+        const timestamp = formatTimestamp(new Date());
+        const line = `${timestamp}  TEMP: ${tempC.toFixed(1)}°C | HUM: ${humidity.toFixed(1)}% | GPS: ${gps} | SCORE: ${integrity.toFixed(2)}%`;
+
+        const div = document.createElement('div');
+        div.className = `terminal-line ${isBreach ? 'breach' : ''}`;
+        div.textContent = line;
+
+        if (DOM.terminal.querySelector('.terminal-empty')) {
+            DOM.terminal.innerHTML = '';
+        }
+
+        DOM.terminal.insertBefore(div, DOM.terminal.firstChild);
+
+        // Keep max 60 lines
+        while (DOM.terminal.children.length > 60) {
+            DOM.terminal.removeChild(DOM.terminal.lastChild);
+        }
+
+        state.telemetryLog.unshift({ timestamp: new Date().toISOString(), tempC, humidity, gps, isBreach, integrity });
+        if (state.telemetryLog.length > 1000) state.telemetryLog.pop();
+
+        // Auto-scroll if not paused
+        if (!state.terminalPaused) {
+            DOM.terminal.scrollTop = 0;
+            DOM.resumeBtn.classList.remove('show');
+        }
+    }
+
+    DOM.terminal.addEventListener('scroll', () => {
+        const isAtBottom = DOM.terminal.scrollTop === 0;
+        state.terminalPaused = !isAtBottom;
+        DOM.resumeBtn.classList.toggle('show', state.terminalPaused);
+    });
+
+    DOM.resumeBtn.addEventListener('click', () => {
+        DOM.terminal.scrollTop = 0;
+        state.terminalPaused = false;
+        DOM.resumeBtn.classList.remove('show');
+    });
+
+    /* ==================== EXPORT CSV ==================== */
+    DOM.exportBtn.addEventListener('click', () => {
+        const csv = ['Timestamp,Temperature(C),GPS,Status,Integrity(%)'];
+        state.telemetryLog.reverse().forEach(entry => {
+            csv.push(`"${entry.timestamp}",${entry.tempC},"${entry.gps}","${entry.isBreach ? 'BREACH' : 'IN RANGE'}",${entry.integrity.toFixed(2)}`);
+        });
+        state.telemetryLog.reverse();
+
+        const blob = new Blob([csv.join('\n')], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `cold-chain-export-${Date.now()}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+
+    /* ==================== LEAFLET MAP ==================== */
+    function initMap() {
+        state.map = L.map('map').setView([20, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(state.map);
+    }
+
+    function updateMapMarker(gpsString) {
+        try {
+            const [lat, lon] = gpsString.split(',').map(x => parseFloat(x.trim()));
+            if (isNaN(lat) || isNaN(lon)) {
+                DOM.gpsCoords.textContent = 'INVALID COORDINATES';
+                return;
+            }
+
+            state.gpsConnected = true;
+            updateStatus('gps', true);
+            DOM.gpsCoords.textContent = `LAT: ${lat.toFixed(4)} | LON: ${lon.toFixed(4)}`;
+
+            if (state.marker) {
+                state.marker.setLatLng([lat, lon]);
+            } else {
+                state.marker = L.circleMarker([lat, lon], {
+                    radius: 8,
+                    fillColor: 'var(--mint)',
+                    color: 'var(--forest)',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.8,
+                }).addTo(state.map);
+            }
+
+            state.map.setView([lat, lon], 13);
+        } catch (e) {
+            console.error('GPS parse error:', e);
+        }
+    }
+
+    /* ==================== WEBSOCKET ==================== */
+    function initWebSocket() {
+        try {
+            console.log('[WS] Attempting to connect to:', CONFIG.WS_URL);
+            state.ws = new WebSocket(CONFIG.WS_URL);
+
+            state.ws.onopen = () => {
+                console.log('[WS] ✅ Connected successfully');
+                updateStatus('ws', true);
+                state.wsConnected = true;
+            };
+
+            state.ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log('[WS] Message received:', data);
+                    const tempC = tempRawToC(data.temp);
+                    const humidity = data.humidity || 0;
+                    const score = data.score || state.currentIntegrity || 100;
+                    const isBreach = data.temp < CONFIG.TEMP_MIN_RAW || data.temp > CONFIG.TEMP_MAX_RAW;
+
+                    // Update history and UI
+                    state.totalReadings++;
+                    if (isBreach) {
+                        state.breachCount++;
+                        DOM.breachCounter.textContent = state.breachCount;
+                    }
+
+                    // Store in history
+                    state.tempHistory.push({ temp: tempC, isBreach });
+                    if (state.tempHistory.length > 40) state.tempHistory.shift();
+
+                    // Integrity decay animation (only if score decreased)
+                    if (score < state.lastIntegrity && isBreach) {
+                        updateIntegrityGaugeWithBreach(score);
+                        DOM.integrityArc.parentElement.classList.add('glow');
+                        setTimeout(() => DOM.integrityArc.parentElement.classList.remove('glow'), 100);
+                    } else {
+                        updateIntegrityGauge(score, false);
+                        // Add glow when stable
+                        if (score >= 80) {
+                            DOM.integrityArc.parentElement.classList.add('glow');
+                        }
+                    }
+
+                    state.lastIntegrity = score;
+                    state.integrityHistory.push(score);
+                    if (state.integrityHistory.length > 30) state.integrityHistory.shift();
+                    updateSparkline();
+
+                    // Update temperature and humidity UIs
+                    updateTemperatureUI(tempC, isBreach);
+                    updateHumidityGauge(humidity);
+                    state.humidityHistory.push(humidity);
+                    if (state.humidityHistory.length > 20) state.humidityHistory.shift();
+                    updateHumiditySparkline();
+
+                    // Update map and terminal
+                    updateMapMarker(data.gps);
+                    addTerminalLine(tempC, humidity, data.gps, score, isBreach);
+                    updateTimeline();
+                    updateStats();
+
+                } catch (e) {
+                    console.error('[WS] Parse error:', e);
+                }
+            };
+
+            state.ws.onerror = (error) => {
+                console.error('[WS] ❌ WebSocket error:', error);
+                updateStatus('ws', false);
+                state.wsConnected = false;
+            };
+
+            state.ws.onclose = () => {
+                console.warn('[WS] ⚠️  Disconnected. Reconnecting in 3s...');
+                updateStatus('ws', false);
+                state.wsConnected = false;
+                setTimeout(initWebSocket, CONFIG.WS_RECONNECT);
+            };
+        } catch (e) {
+            console.error('[WS] WebSocket init error:', e);
+            setTimeout(initWebSocket, CONFIG.WS_RECONNECT);
+        }
+    }
+
+    /* ==================== API FETCHES ==================== */
+    async function fetchIntegrityScore() {
+        try {
+            const res = await fetch(`${CONFIG.API_BASE}/integrity-score`);
+            const data = await res.json();
+            updateIntegrityGauge(data.score);
+            state.integrityHistory.push(data.score);
+            if (state.integrityHistory.length > 30) state.integrityHistory.shift();
+            updateSparkline();
+            updateStatus('chain', true);
+        } catch (e) {
+            updateStatus('chain', false);
+        }
+    }
+
+    async function fetchLogCount() {
+        try {
+            const res = await fetch(`${CONFIG.API_BASE}/log-count`);
+            const data = await res.json();
+            DOM.logCount.textContent = data.logCount || 0;
+            state.logCount = data.logCount || 0;
+            updateStatus('chain', true);
+        } catch (e) {
+            updateStatus('chain', false);
+        }
+    }
+
+    async function fetchLedger() {
+        try {
+            const res = await fetch(`${CONFIG.API_BASE}/blockchain-records`);
+            const records = await res.json();
+            populateLedger(records || []);
+        } catch (e) {
+            console.error('Ledger error:', e);
+        }
+    }
+
+    function populateLedger(records) {
+        DOM.ledgerBody.innerHTML = '';
+
+        if (!records || records.length === 0) {
+            DOM.ledgerBody.innerHTML = '<tr><td colspan="6" class="ledger-empty"><div class="ledger-empty-icon">✅</div><div>No violations recorded. The chain is clean.</div></td></tr>';
+            return;
+        }
+
+        records.forEach((r, idx) => {
+            const tr = document.createElement('tr');
+            tr.classList.add('new-breach');
+            tr.innerHTML = `
+                <td>${r.logId || idx + 1}</td>
+                <td>${formatDateFull(new Date(r.timestamp))}</td>
+                <td>${tempRawToC(r.temp).toFixed(1)}</td>
+                <td>${r.gps}</td>
+                <td>${(r.integrityAfter / 100).toFixed(2)}%</td>
+                <td><span class="ledger-badge">ON-CHAIN ✓</span></td>
+            `;
+            DOM.ledgerBody.appendChild(tr);
+        });
+    }
+
+    /* ==================== INIT ==================== */
+    function init() {
+        console.log('%c🚀 The Immutable Cold Chain — Starting...', 'color: #1A6B3C; font-weight: bold; font-size: 14px');
+        console.log('[STARTUP] CONFIG:', CONFIG);
+        console.log('[STARTUP] Expected endpoints: API at', CONFIG.API_BASE, '| WebSocket at', CONFIG.WS_URL);
+        
+        // Initialize gauges FIRST (sets up SVG stroke properties and pre-populates data)
+        initializeGauges();
+        
+        // Then init map and connections
+        initMap();
+        initWebSocket();
+        fetchIntegrityScore();
+        fetchLogCount();
+        fetchLedger();
+
+        setInterval(fetchIntegrityScore, CONFIG.POLL_INTERVAL);
+        setInterval(fetchLogCount, CONFIG.POLL_INTERVAL);
+        setInterval(fetchLedger, CONFIG.POLL_INTERVAL);
+        setInterval(updateStats, 1000);
+        
+        console.log('[STARTUP] Dashboard initialized. Check browser console [F12] for [WS] logs below:');
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+</script>
+
+</body>
+</html>
