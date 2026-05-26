@@ -9,20 +9,19 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'ColdChain Monitor | Vaccine Cold Chain IoT-Blockchain',
+  title: 'PharmaTrace | Product Tracking Dashboard',
   description:
-    'Next-Gen IoT-Blockchain Vaccine Cold Chain Monitoring Dashboard with real-time data streaming, anomaly detection, and ledger auditing.',
+    'Professional B2B Supply Chain Management Dashboard with real-time product tracking, blockchain verification, and quality assurance.',
   keywords: [
-    'vaccine',
-    'cold chain',
-    'IoT',
+    'product tracking',
+    'supply chain',
     'blockchain',
     'monitoring',
     'dashboard',
-    'real-time',
+    'pharmaceutical',
   ],
   viewport: 'width=device-width, initial-scale=1.0',
-  themeColor: '#09090b',
+  themeColor: '#f4f6f9',
 }
 
 export default function RootLayout({

@@ -7,7 +7,7 @@
 @layer base {
   :root {
     --font-inter: 'Inter', system-ui, sans-serif;
-    color-scheme: dark;
+    color-scheme: light;
   }
 
   html {
@@ -15,7 +15,7 @@
   }
 
   body {
-    @apply bg-zinc-950 text-zinc-100 font-sans;
+    @apply bg-bg-primary text-text-primary font-sans;
   }
 
   /* Scrollbar styling */
@@ -29,25 +29,25 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: rgba(113, 113, 122, 0.3);
+    background: rgba(156, 163, 175, 0.3);
     border-radius: 4px;
 
     &:hover {
-      background: rgba(113, 113, 122, 0.5);
+      background: rgba(156, 163, 175, 0.5);
     }
   }
 
   /* Firefox scrollbar */
   * {
-    scrollbar-color: rgba(113, 113, 122, 0.3) transparent;
+    scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
     scrollbar-width: thin;
   }
 }
 
 @layer components {
-  /* Glassmorphism cards */
-  .glass-card {
-    @apply rounded-lg border border-zinc-700/50 bg-zinc-900/30 backdrop-blur-sm p-6 transition-all duration-300 hover:border-zinc-600/80 hover:bg-zinc-900/50;
+  /* Light mode card styling */
+  .light-card {
+    @apply rounded-lg border border-border-light bg-white shadow-card-shadow transition-all duration-300 hover:shadow-card-shadow-hover;
   }
 
   /* Metric card shine effect */

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React from 'react'
 import {
   Menu,
   X,
@@ -29,24 +29,29 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
   const navItems: NavItem[] = [
     {
-      label: 'Live Monitor',
+      label: 'Track and Trace',
       icon: <BarChart3 size={18} />,
       href: '#',
       active: true,
     },
     {
-      label: 'Ledger Audit',
+      label: 'Serialization',
       icon: <Shield size={18} />,
       href: '#',
     },
     {
-      label: 'Device Fleet',
+      label: 'Transactions',
       icon: <Zap size={18} />,
       href: '#',
       badge: 12,
     },
     {
-      label: 'Analytics',
+      label: 'Reporting',
+      icon: <Sigma size={18} />,
+      href: '#',
+    },
+    {
+      label: 'CryptoWallet',
       icon: <Sigma size={18} />,
       href: '#',
     },
@@ -57,15 +62,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
       {/* Mobile toggle button */}
       <button
         onClick={() => onToggle(!isOpen)}
-        className="fixed top-4 left-4 z-50 md:hidden p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+        className="fixed top-4 left-4 z-50 md:hidden p-2 hover:bg-blue-100 rounded-lg transition-colors"
       >
-        {isOpen ? <X size={24} /> : <Menu size={24} />}
+        {isOpen ? <X size={24} className="text-text-primary" /> : <Menu size={24} className="text-text-primary" />}
       </button>
 
       {/* Overlay for mobile */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+          className="fixed inset-0 bg-black/20 z-30 md:hidden"
           onClick={() => onToggle(false)}
         />
       )}
@@ -74,21 +79,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
       <aside
         className={cn(
           'fixed left-0 top-0 h-screen w-64 z-40',
-          'border-r border-zinc-700/50 bg-zinc-900/80 backdrop-blur-sm',
+          'bg-sidebar-navy',
           'flex flex-col',
           'transition-transform duration-300 ease-out md:translate-x-0',
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         )}
       >
         {/* Logo / Branding */}
-        <div className="p-6 border-b border-zinc-700/30">
+        <div className="p-6 border-b border-white/10">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
-              <Shield size={18} className="text-zinc-900 font-bold" />
+            <div className="w-8 h-8 rounded-lg bg-accent-blue flex items-center justify-center">
+              <Shield size={18} className="text-white font-bold" />
             </div>
             <div>
-              <p className="font-semibold text-zinc-100 text-sm">ColdChain</p>
-              <p className="text-xs text-zinc-500">Monitor v1.0</p>
+              <p className="font-semibold text-white text-sm">PharmaTrace</p>
+              <p className="text-xs text-white/60">v1.0</p>
             </div>
           </div>
         </div>
@@ -103,16 +108,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
               className={cn(
                 'group flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 mb-1',
                 item.active
-                  ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400'
-                  : 'text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800/50'
+                  ? 'bg-accent-blue/20 text-white'
+                  : 'text-white/70 hover:text-white hover:bg-white/10'
               )}
             >
-              <span className={item.active ? 'text-emerald-400' : 'text-zinc-500 group-hover:text-zinc-400'}>
+              <span className="text-lg">
                 {item.icon}
               </span>
               <span className="text-sm font-medium flex-1">{item.label}</span>
               {item.badge && (
-                <span className="px-2 py-0.5 bg-red-500/20 border border-red-500/30 text-red-400 text-xs rounded-full font-medium">
+                <span className="px-2 py-0.5 bg-red-500/20 text-red-200 text-xs rounded-full font-medium">
                   {item.badge}
                 </span>
               )}
@@ -121,12 +126,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
         </nav>
 
         {/* Footer actions */}
-        <div className="border-t border-zinc-700/30 p-3 space-y-1">
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800/50 transition-all duration-200">
+        <div className="border-t border-white/10 p-3 space-y-1">
+          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200">
             <Settings size={18} />
             <span className="text-sm font-medium">Settings</span>
           </button>
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-zinc-400 hover:text-zinc-300 hover:bg-zinc-800/50 transition-all duration-200">
+          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200">
             <LogOut size={18} />
             <span className="text-sm font-medium">Disconnect</span>
           </button>

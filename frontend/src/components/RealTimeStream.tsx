@@ -18,7 +18,7 @@ interface RealTimeStreamProps {
   data: ChartDataPoint[]
 }
 
-const CustomTooltip: React.FC<any> = ({ active, payload, label }) => {
+const CustomTooltip: React.FC<any> = ({ active, payload }) => {
   if (active && payload?.length) {
     return (
       <div className="bg-zinc-900 border border-zinc-700 rounded-lg p-3 shadow-lg">
@@ -113,7 +113,6 @@ export const RealTimeStream: React.FC<RealTimeStreamProps> = ({ data }) => {
             <Legend
               wrapperStyle={{ paddingTop: '20px' }}
               iconType="line"
-              textStyle={{ color: '#a1a1aa', fontSize: 12 }}
             />
 
             {/* Main lines with glow effect */}

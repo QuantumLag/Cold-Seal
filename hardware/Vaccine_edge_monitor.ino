@@ -1,3 +1,4 @@
+#include "anomaly_detector.hpp"
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h> 
@@ -9,7 +10,6 @@
 
 // Project Modular Header Inclusions
 #include "pins_and_objects.h"
-#include "anomaly_detector.hpp"
 
 // Define Hardware Objects
 OneWire oneWire(DS18B20_PIN);
@@ -26,7 +26,14 @@ const char* serverEndpoint = "http://YOUR_BACKEND_IP_OR_URL/api/telemetry";
 const char* blockchainEndpoint = "http://YOUR_GANACHE_IP:7545"; // Local Ganache Node Endpoint
 const char* geoEndpoint = "http://ip-api.com/json/";
 
-// Application Core Engine Instances
+// Unified Timing Flags for Multiplexed Cadence Controls
+unsigned long lastTelemetryStreamTime = 0;
+const unsigned long TELEMETRY_STREAM_INTERVAL = 5000;   // Standard server upload every 5 seconds
+
+unsigned long lastAnomalyCheckTime = 0;
+const unsigned long ANOMALY_CHECK_INTERVAL = 60000;    // ML Window baseline tick exact at 60 seconds (1 minute)
+
+// Unified Single Instance Application Core Engine 
 LightweightAnomalyDetector mlDetector;
 
 struct SensorReading {
@@ -45,6 +52,11 @@ const size_t SPIFFS_MAX_CAPACITY = 3 * 1024 * 1024;
 
 float currentLat = 0.0000;
 float currentLng = 0.0000;
+
+// Shared state variables tracking current window matrix results
+float currentAnomalyScore = 0.0f;
+bool currentIsAnomaly = false;
+String currentStatusMessage = "Initializing tracking pipeline...";
 
 // Forward Declarations of Utility Pipelines
 void updateLocationOnChip();
@@ -92,63 +104,99 @@ void setup() {
 }
 
 void loop() {
-    // Step 1: Data Acquisition & Structural Diagnostics
-    SensorReading cleanReading = readAllSensors();
-    
-    if (validateReadings(cleanReading)) {
-        Serial.println("✓ Hardware verification checks cleared.");
+    unsigned long currentMillis = millis();
+
+    // Pipeline Check 1: Periodic 1-Minute ML Window Feature Aggregation
+    if (currentMillis - lastAnomalyCheckTime >= ANOMALY_CHECK_INTERVAL || lastAnomalyCheckTime == 0) {
+        lastAnomalyCheckTime = currentMillis;
         
-        // Step 2: Push metrics into rolling memory window and run Edge ML Inference
-        mlDetector.addReading(cleanReading.temperature, cleanReading.humidity, cleanReading.pressure, cleanReading.light, cleanReading.accel_magnitude);
-        LightweightAnomalyDetector::AnomalyResult mlResult = mlDetector.detectAnomaly();
-        
-        // Routinely try fetching location coordinates if not already resolved
-        if (WiFi.status() == WL_CONNECTED && currentLat == 0.0000) {
-            updateLocationOnChip();
-        }
-
-        // Step 3: Construct Central Unified Telemetry Package
-        StaticJsonDocument<512> doc;
-        doc["lat"] = currentLat;
-        doc["lng"] = currentLng;
-        doc["temp"] = cleanReading.temperature;
-        doc["humidity"] = cleanReading.humidity;
-        doc["pressure"] = cleanReading.pressure;
-        doc["light"] = cleanReading.light;
-        doc["accel"] = cleanReading.accel_magnitude;
-        doc["anomalyScore"] = mlResult.anomalyScore;
-        doc["isAnomaly"] = mlResult.isAnomaly;
-        doc["statusMessage"] = mlResult.reason;
-        doc["timestamp"] = millis();
-
-        String payload;
-        serializeJson(doc, payload);
-
-        // Step 4: THE INTEGRATED GATEKEEPER ROUTING (Separation of Concerns)
-        if (WiFi.status() == WL_CONNECTED) {
-            // Path A: Always stream real-time JSON out to FastAPI over standard HTTP WebSockets pipeline
-            bool webServerSuccess = sendTelemetryToServer(payload);
+        SensorReading mlSample = readAllSensors();
+        if (validateReadings(mlSample)) {
+            // Append current environmental metrics to window buffer array structures
+            mlDetector.addReading(mlSample.temperature, mlSample.humidity, mlSample.pressure, mlSample.light, mlSample.accel_magnitude);
             
-            // Path B: Only commit ledger entries during ML Verified Risk states
-            if (mlResult.isAnomaly) {
-                Serial.println("⚠ CRITICAL RISK STATE DETECTED! Initiating Blockchain Anchor...");
-                bool txSuccess = triggerBlockchainTransaction(cleanReading.temperature, currentLat, currentLng, mlResult.anomalyScore, mlResult.reason);
-                if (!txSuccess) {
-                    handleOfflineStorage(payload);
+            // Execute statistical variance evaluations over the updated timeline vector
+            LightweightAnomalyDetector::AnomalyResult mlResult = mlDetector.detectAnomaly();
+            
+            // Store results to latch onto outbound 5-second JSON payload packets
+            currentAnomalyScore = mlResult.anomalyScore;
+            currentIsAnomaly = mlResult.isAnomaly;
+            currentStatusMessage = mlResult.reason;
+
+            // Instantly route emergency cryptographic anchor blocks if state breaks security boundaries
+            if (currentIsAnomaly) {
+                Serial.println("⚠ CRITICAL RISK STATE DETECTED BY ML ENGINE! Initiating Blockchain Anchor...");
+                if (WiFi.status() == WL_CONNECTED) {
+                    bool txSuccess = triggerBlockchainTransaction(mlSample.temperature, currentLat, currentLng, currentAnomalyScore, currentStatusMessage);
+                    if (!txSuccess) {
+                        // Cascade payload to local flash arrays if RPC bridge times out
+                        StaticJsonDocument<256> alertDoc;
+                        alertDoc["alert"] = "Blockchain Tx Failed";
+                        alertDoc["temp"] = mlSample.temperature;
+                        alertDoc["score"] = currentAnomalyScore;
+                        alertDoc["reason"] = currentStatusMessage;
+                        String alertPayload;
+                        serializeJson(alertDoc, alertPayload);
+                        handleOfflineStorage(alertPayload);
+                    }
+                } else {
+                    StaticJsonDocument<256> alertDoc;
+                    alertDoc["alert"] = "Offline Node Alert";
+                    alertDoc["temp"] = mlSample.temperature;
+                    alertDoc["score"] = currentAnomalyScore;
+                    String alertPayload;
+                    serializeJson(alertDoc, alertPayload);
+                    handleOfflineStorage(alertPayload);
                 }
-            } else if (webServerSuccess) {
-                // If network connection is clear and baseline transport succeeded, look for past debt
-                syncOfflineData();
             }
-        } else {
-            // If offline, cascade directly to local Flash file buffering configurations
-            handleOfflineStorage(payload);
         }
-    } else {
-        Serial.println("✗ Environmental frame rejected due to physical inconsistencies.");
     }
 
-    delay(5000); // Sample telemetry every 5 seconds for responsive edge tracking
+    // Pipeline Check 2: High-Frequency Real-Time Telemetry Stream Loop (Every 5 seconds)
+    if (currentMillis - lastTelemetryStreamTime >= TELEMETRY_STREAM_INTERVAL) {
+        lastTelemetryStreamTime = currentMillis;
+
+        SensorReading cleanReading = readAllSensors();
+        
+        if (validateReadings(cleanReading)) {
+            Serial.println("✓ Hardware verification checks cleared.");
+            
+            // Routinely try fetching location coordinates if network drops re-connected
+            if (WiFi.status() == WL_CONNECTED && currentLat == 0.0000) {
+                updateLocationOnChip();
+            }
+
+            // Construct Central Unified Telemetry Package containing active status variables
+            StaticJsonDocument<512> doc;
+            doc["lat"] = currentLat;
+            doc["lng"] = currentLng;
+            doc["temp"] = cleanReading.temperature;
+            doc["humidity"] = cleanReading.humidity;
+            doc["pressure"] = cleanReading.pressure;
+            doc["light"] = cleanReading.light;
+            doc["accel"] = cleanReading.accel_magnitude;
+            doc["anomalyScore"] = currentAnomalyScore;
+            doc["isAnomaly"] = currentIsAnomaly;
+            doc["statusMessage"] = currentStatusMessage;
+            doc["timestamp"] = currentMillis;
+
+            String payload;
+            serializeJson(doc, payload);
+
+            // Transmit telemetry to FastAPI endpoints or write back logs securely to local file systems
+            if (WiFi.status() == WL_CONNECTED) {
+                bool webServerSuccess = sendTelemetryToServer(payload);
+                if (webServerSuccess && !currentIsAnomaly) {
+                    // Sync uncommitted structural records during idle periods
+                    syncOfflineData();
+                }
+            } else {
+                handleOfflineStorage(payload);
+            }
+        } else {
+            Serial.println("✗ Environmental frame rejected due to physical inconsistencies.");
+        }
+    }
 }
 
 SensorReading readAllSensors() {
@@ -190,7 +238,7 @@ bool validateReadings(const SensorReading& reading) {
         if (temp_change_rate > 5.0) return false;
         
         float pressure_delta = abs(reading.pressure - prev.pressure);
-        if (pressure_delta > 10000) return false; // Adjusted threshold for Pa instead of hPa
+        if (pressure_delta > 10000) return false; 
         
         if (reading.temperature < 5 && reading.humidity < 10) return false;
     }
@@ -230,17 +278,14 @@ bool sendTelemetryToServer(String jsonPayload) {
     return (httpResponseCode == 200 || httpResponseCode == 201);
 }
 
-// 🔐 Web3 Bridge Integration Execution Hook
 bool triggerBlockchainTransaction(float temp, float lat, float lng, float score, String reason) {
     HTTPClient http;
     http.begin(blockchainEndpoint);
     http.addHeader("Content-Type", "application/json");
     
-    // Scale standard decimal temperature down into a fixed uint scaling factor for contract safety (e.g. 5.5°C -> 55)
     int scaledTemp = (int)(temp * 10);
     String geoCoordinates = String(lat, 4) + "," + String(lng, 4);
 
-    // Formulate native JSON-RPC format payload to invoke contract logData function via web3
     String jsonRPC = "{\"jsonrpc\":\"2.0\",\"method\":\"eth_sendTransaction\",\"params\":[{\"to\":\"YOUR_CONTRACT_ADDRESS\",\"data\":\"NATIVE_HEX_DATA_PAYLOAD\"}],\"id\":1}";
     
     int httpResponseCode = http.POST(jsonRPC);

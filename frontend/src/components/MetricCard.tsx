@@ -2,8 +2,8 @@
 
 import React from 'react'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
-import { cn, getStatusColor, getStatusGlow } from '@/lib/utils'
+import { TrendingUp, TrendingDown } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { MetricCardProps } from '@/types'
 
 export const MetricCard: React.FC<MetricCardProps> = ({
@@ -15,40 +15,36 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   sparklineData = [],
   trend = 'stable',
 }) => {
-  const statusColor = getStatusColor(status)
-  const glowClass = getStatusGlow(status)
-
   const chartData = sparklineData.map((v, i) => ({
     value: v,
     index: i,
   }))
 
-  const strokeColor = status === 'healthy' ? '#34d399' : status === 'warning' ? '#fbbf24' : '#f87171'
+  const strokeColor = status === 'healthy' ? '#10b981' : status === 'warning' ? '#f59e0b' : '#ef4444'
+  const statusColorClass = status === 'healthy' ? 'text-green-600' : status === 'warning' ? 'text-orange-600' : 'text-red-600'
+  const bgColorClass = status === 'healthy' ? 'bg-green-50' : status === 'warning' ? 'bg-orange-50' : 'bg-red-50'
+  const dotColor = status === 'healthy' ? 'bg-green-500' : status === 'warning' ? 'bg-orange-500' : 'bg-red-500'
 
   return (
     <div
       className={cn(
-        'group relative overflow-hidden rounded-lg border border-zinc-700/50 bg-zinc-900/30 backdrop-blur-sm p-6',
-        'transition-all duration-300 hover:border-zinc-600/80 hover:bg-zinc-900/50',
-        glowClass
+        'group relative overflow-hidden rounded-lg border border-border-light bg-white shadow-card-shadow p-6',
+        'transition-all duration-300 hover:shadow-card-shadow-hover'
       )}
     >
-      {/* Gradient overlay on hover */}
-      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/0 to-emerald-500/0 group-hover:from-emerald-500/5 group-hover:to-emerald-500/0 transition-all duration-300" />
-
       <div className="relative z-10">
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
-            <p className="text-xs font-medium text-zinc-400 uppercase tracking-wide mb-1">{label}</p>
+            <p className="text-xs font-medium text-text-secondary uppercase tracking-wide mb-1">{label}</p>
             <div className="flex items-baseline gap-1">
-              <p className={cn('text-3xl font-bold', statusColor)}>
+              <p className={cn('text-3xl font-bold', statusColorClass)}>
                 {typeof value === 'number' ? value.toFixed(2) : value}
               </p>
-              {unit && <span className="text-sm text-zinc-500">{unit}</span>}
+              {unit && <span className="text-sm text-text-secondary">{unit}</span>}
             </div>
           </div>
-          <div className={cn('p-2 rounded-lg bg-zinc-800/50 text-lg', statusColor)}>
+          <div className={cn('p-2 rounded-lg text-lg', bgColorClass, statusColorClass)}>
             {icon}
           </div>
         </div>
@@ -57,13 +53,13 @@ export const MetricCard: React.FC<MetricCardProps> = ({
         {trend !== 'stable' && (
           <div className="flex items-center gap-1 mb-3">
             {trend === 'up' && (
-              <div className="flex items-center gap-1 text-emerald-400 text-xs">
+              <div className="flex items-center gap-1 text-green-600 text-xs">
                 <TrendingUp size={12} />
                 <span>Increasing</span>
               </div>
             )}
             {trend === 'down' && (
-              <div className="flex items-center gap-1 text-amber-400 text-xs">
+              <div className="flex items-center gap-1 text-orange-600 text-xs">
                 <TrendingDown size={12} />
                 <span>Decreasing</span>
               </div>
@@ -90,18 +86,18 @@ export const MetricCard: React.FC<MetricCardProps> = ({
         )}
 
         {/* Status badge */}
-        <div className="flex items-center gap-2 mt-4 pt-3 border-t border-zinc-700/30">
+        <div className="flex items-center gap-2 mt-4 pt-3 border-t border-border-light">
           <div
             className={cn(
               'w-2 h-2 rounded-full',
-              status === 'healthy' && 'bg-emerald-400 animate-pulse',
-              status === 'warning' && 'bg-amber-400',
-              status === 'critical' && 'bg-red-400 animate-pulse'
+              dotColor,
+              status === 'healthy' || status === 'critical' ? 'animate-pulse' : ''
             )}
           />
-          <span className="text-xs text-zinc-400 capitalize">{status}</span>
+          <span className="text-xs text-text-secondary capitalize">{status}</span>
         </div>
       </div>
     </div>
   )
 }
+
