@@ -756,6 +756,98 @@
             margin-bottom: 1rem;
         }
 
+        /* ==================== DETAIL INSPECTION PANEL ==================== */
+        .detail-panel {
+            position: fixed;
+            right: -400px;
+            top: 0;
+            width: 400px;
+            height: 100vh;
+            background: var(--white);
+            border-left: 4px solid var(--forest);
+            box-shadow: -4px 0 16px rgba(0, 0, 0, 0.15);
+            transition: right 0.3s ease;
+            z-index: 999;
+            overflow-y: auto;
+            padding: 2rem;
+        }
+
+        .detail-panel.active {
+            right: 0;
+        }
+
+        .detail-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--light-grey);
+        }
+
+        .detail-panel-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--forest);
+        }
+
+        .detail-panel-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--grey);
+            transition: color 0.2s ease;
+        }
+
+        .detail-panel-close:hover {
+            color: var(--crimson);
+        }
+
+        .detail-row {
+            margin-bottom: 1.5rem;
+        }
+
+        .detail-label {
+            font-size: 0.75rem;
+            color: var(--grey);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 0.5rem;
+        }
+
+        .detail-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--dark-grey);
+            font-family: var(--mono);
+            word-break: break-all;
+            background: var(--off-white);
+            padding: 0.8rem;
+            border-radius: 6px;
+            border-left: 3px solid var(--mint);
+        }
+
+        .detail-value.breach {
+            border-left-color: var(--crimson);
+            background: rgba(220, 38, 38, 0.05);
+            color: var(--crimson);
+        }
+
+        .detail-value.gas-note {
+            font-size: 0.8rem;
+            color: var(--grey);
+            border-left-color: var(--amber);
+            background: rgba(245, 158, 11, 0.05);
+        }
+
+        .detail-divider {
+            height: 1px;
+            background: var(--light-grey);
+            margin: 1.5rem 0;
+        }
+
         /* ==================== SECTION 7: FOOTER STATS ==================== */
         .stats-footer {
             display: grid;
@@ -1099,6 +1191,53 @@
     </table>
 </section>
 
+<!-- ==================== DETAIL INSPECTION PANEL ==================== -->
+<aside class="detail-panel" id="detailPanel">
+    <div class="detail-panel-header">
+        <div class="detail-panel-title">📋 BREACH DETAILS</div>
+        <button class="detail-panel-close" id="detailPanelClose">✕</button>
+    </div>
+    
+    <div class="detail-row">
+        <div class="detail-label">Log ID</div>
+        <div class="detail-value" id="detailLogId">--</div>
+    </div>
+    
+    <div class="detail-row">
+        <div class="detail-label">Timestamp</div>
+        <div class="detail-value" id="detailTimestamp">--</div>
+    </div>
+    
+    <div class="detail-row">
+        <div class="detail-label">🌡️ Temperature</div>
+        <div class="detail-value breach" id="detailTemp">--</div>
+    </div>
+    
+    <div class="detail-row">
+        <div class="detail-label">📍 GPS Coordinates</div>
+        <div class="detail-value" id="detailGPS">--</div>
+    </div>
+    
+    <div class="detail-divider"></div>
+    
+    <div class="detail-row">
+        <div class="detail-label">Integrity Score After Breach</div>
+        <div class="detail-value" id="detailScore">--</div>
+    </div>
+    
+    <div class="detail-row">
+        <div class="detail-label">⛓️ Blockchain Anchor</div>
+        <div class="detail-value" id="detailBlockchainAnchor">On-chain immutable record</div>
+    </div>
+    
+    <div class="detail-row">
+        <div class="detail-value gas-note" id="detailGasNote">
+            💾 Only breach events are written to blockchain (gas-optimized)<br/>
+            Safe readings remain off-chain only
+        </div>
+    </div>
+</aside>
+
 <!-- ==================== SECTION 7: FOOTER STATS ==================== -->
 <footer class="stats-footer">
     <div>
@@ -1191,6 +1330,14 @@
         statBreach: document.getElementById('statBreach'),
         statIntegrity: document.getElementById('statIntegrity'),
         statGasSaved: document.getElementById('statGasSaved'),
+        detailPanel: document.getElementById('detailPanel'),
+        detailPanelClose: document.getElementById('detailPanelClose'),
+        detailLogId: document.getElementById('detailLogId'),
+        detailTimestamp: document.getElementById('detailTimestamp'),
+        detailTemp: document.getElementById('detailTemp'),
+        detailGPS: document.getElementById('detailGPS'),
+        detailScore: document.getElementById('detailScore'),
+        detailBlockchainAnchor: document.getElementById('detailBlockchainAnchor'),
     };
 
     /* ==================== UTILITIES ==================== */
@@ -1796,8 +1943,63 @@
         records.forEach((r, idx) => {
             const tr = document.createElement('tr');
             tr.classList.add('new-breach');
+            
+            // Convert raw temperature to Celsius
+            const tempCelsius = tempRawToC(r.temp);
+            
+            // Create table row HTML
             tr.innerHTML = `
                 <td>${r.logId || idx + 1}</td>
+                <td>${formatDateFull(new Date(r.timestamp))}</td>
+                <td>${tempCelsius.toFixed(1)}</td>
+                <td>${r.gps}</td>
+                <td>${(r.integrityAfter / 100).toFixed(2)}%</td>
+                <td><span class="ledger-badge">ON-CHAIN ✓</span></td>
+            `;
+            
+            // Add click event listener to open detail panel
+            tr.style.cursor = 'pointer';
+            tr.addEventListener('click', () => {
+                showDetailPanel({
+                    logId: r.logId || (idx + 1),
+                    timestamp: formatDateFull(new Date(r.timestamp)),
+                    tempRaw: r.temp,
+                    tempCelsius: tempCelsius,
+                    gps: r.gps,
+                    integrityScore: (r.integrityAfter / 100).toFixed(2),
+                });
+                // Highlight selected row
+                document.querySelectorAll('.ledger-table tbody tr').forEach(row => row.style.background = '');
+                tr.style.background = 'rgba(26, 107, 60, 0.15)';
+            });
+            
+            DOM.ledgerBody.appendChild(tr);
+        });
+    }
+
+    /* ==================== DETAIL PANEL FUNCTIONS ==================== */
+    function showDetailPanel(record) {
+        // Display breach details in the right-hand inspection panel
+        DOM.detailLogId.textContent = `#${record.logId}`;
+        DOM.detailTimestamp.textContent = record.timestamp;
+        DOM.detailTemp.textContent = `${record.tempCelsius.toFixed(1)}°C (raw: ${record.tempRaw}/10)`;
+        DOM.detailGPS.textContent = record.gps;
+        DOM.detailScore.textContent = `${record.integrityScore}%`;
+        DOM.detailBlockchainAnchor.textContent = `✓ On-chain immutable record (Log ID: ${record.logId})`;
+        
+        // Animate panel in
+        DOM.detailPanel.classList.add('active');
+    }
+
+    function closeDetailPanel() {
+        // Hide the detail panel
+        DOM.detailPanel.classList.remove('active');
+        // Remove row highlighting
+        document.querySelectorAll('.ledger-table tbody tr').forEach(row => row.style.background = '');
+    }
+
+    // Detail panel close button event listener
+    DOM.detailPanelClose.addEventListener('click', closeDetailPanel);
                 <td>${formatDateFull(new Date(r.timestamp))}</td>
                 <td>${tempRawToC(r.temp).toFixed(1)}</td>
                 <td>${r.gps}</td>

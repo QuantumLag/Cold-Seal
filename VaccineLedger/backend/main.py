@@ -16,33 +16,85 @@ load_dotenv(os.path.join(ROOT_DIR, ".env"))
 
 app = FastAPI()
 
-# Enable CORS for browser requests
+# ==================== CORS CONFIGURATION ====================
+# Enable CORS explicitly for Next.js frontend at localhost:3000
+# This allows the browser to make requests from the frontend dashboard
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:3000",      # Next.js development server
+        "http://127.0.0.1:3000",      # Alternative localhost format
+        "http://localhost:5173",      # Vite dev server (if used)
+        "http://127.0.0.1:5173",
+        "*"                            # Fallback for other clients
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "Accept"],
+    expose_headers=["Content-Type"],
+    max_age=3600,
 )
 
 # 2. WEBSOCKET MANAGER (For Live UI Updates)
 class ConnectionManager:
+    """Manages WebSocket connections and broadcasts telemetry to all connected clients"""
     def __init__(self):
         self.active_connections: List[WebSocket] = []
+        self.message_queue = []  # Buffer last N messages for diagnostics
 
     async def connect(self, websocket: WebSocket):
+        """Accept and register a new WebSocket connection"""
         await websocket.accept()
         self.active_connections.append(websocket)
+        print(f"[WS] Client connected. Total clients: {len(self.active_connections)}")
 
     def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
+        """Unregister a disconnected client"""
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+        print(f"[WS] Client disconnected. Total clients: {len(self.active_connections)}")
 
     async def broadcast(self, message: dict):
+        """
+        Broadcast telemetry message to all connected WebSocket clients.
+        
+        Expected message format:
+        {
+            'temp': int (raw ×10, e.g., 55 = 5.5°C),
+            'humidity': float (0-100%),
+            'gps': string (e.g., "12.9716,77.5946"),
+            'status': string (e.g., "🚨 BREACH" or "✅ SAFE"),
+            'timestamp': string (ISO format or HH:MM:SS),
+            'score': int (0-100, integrity percentage)
+        }
+        """
+        # Ensure all required keys are present
+        sanitized = {
+            'temp': message.get('temp', 0),
+            'humidity': message.get('humidity', 0),
+            'gps': message.get('gps', '0,0'),
+            'status': message.get('status', ''),
+            'timestamp': message.get('timestamp', datetime.now().isoformat()),
+            'score': message.get('score'),
+        }
+        
+        # Store in message queue (last 100 messages for diagnostics)
+        self.message_queue.append(sanitized)
+        if len(self.message_queue) > 100:
+            self.message_queue.pop(0)
+        
+        # Broadcast to all connected clients
+        disconnected_clients = []
         for connection in self.active_connections:
             try:
-                await connection.send_json(message)
-            except:
-                pass
+                await connection.send_json(sanitized)
+            except Exception as e:
+                print(f"[WS] Error sending to client: {e}")
+                disconnected_clients.append(connection)
+        
+        # Clean up dead connections
+        for client in disconnected_clients:
+            self.disconnect(client)
 
 manager = ConnectionManager()
 
@@ -153,39 +205,103 @@ async def get_blockchain_records():
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    """WebSocket endpoint for live temperature/GPS updates from IoT device"""
+    """
+    WebSocket endpoint for real-time telemetry streaming to the dashboard.
+    
+    The frontend connects here and receives broadcasted messages whenever
+    publisher.py sends data to /api/update.
+    
+    Message format sent to frontend:
+    {
+        'temp': int (raw ×10),
+        'humidity': float,
+        'gps': string,
+        'status': string,
+        'timestamp': string,
+        'score': int (0-100%)
+    }
+    """
     await manager.connect(websocket)
     try:
         while True:
+            # Keep connection alive and handle any incoming messages
             data = await websocket.receive_json()
-            # Expected format: {temp: int (raw ×10), gps: string}
-            # Add current integrity score before broadcasting
+            # Echo with integrity score for any direct WebSocket messages from frontend
             if contract:
                 try:
                     score, _, _ = contract.functions.getUIStatus().call()
-                    data['score'] = score  # 0-100%
-                    data['timestamp'] = datetime.now().isoformat()
+                    data['score'] = score
                 except:
                     pass
             await manager.broadcast(data)
     except WebSocketDisconnect:
+        manager.disconnect(websocket)
+    except Exception as e:
+        print(f"[WS] Unexpected error: {e}")
         manager.disconnect(websocket)
 
 # ==================== LEGACY ENDPOINTS ====================
 
 @app.post("/api/update")
 async def update_data(data: dict):
-    """Endpoint for publisher.py to push live IoT data"""
-    # Add integrity score
+    """
+    Endpoint for publisher.py (IoT sensor simulator) to push live telemetry data.
+    
+    Expected request body:
+    {
+        'temp': int (raw ×10),
+        'humidity': float,
+        'gps': string (e.g., "12.9716,77.5946"),
+        'status': string (e.g., "🚨 BREACH" or "✅ SAFE"),
+        'timestamp': string
+    }
+    
+    This endpoint:
+    1. Adds the current blockchain integrity score
+    2. Logs temperature breaches to blockchain (if applicable)
+    3. Broadcasts the enriched payload to all WebSocket-connected dashboard clients
+    """
+    # Extract temperature (raw format: ×10)
+    temp_raw = data.get('temp', 0)
+    gps = data.get('gps', '0,0')
+    
+    # Fetch current blockchain state
     if contract:
         try:
+            score, last_temp, last_gps = contract.functions.getUIStatus().call()
+            data['score'] = score  # 0-100 percentage
+        except Exception as e:
+            print(f"[/api/update] Blockchain read error: {e}")
+            data['score'] = None
+    
+    # Add/update timestamp if missing
+    if 'timestamp' not in data or not data['timestamp']:
+        data['timestamp'] = datetime.now().isoformat()
+    
+    # Log breach to blockchain if temperature is outside safe zone
+    if contract and (temp_raw < TEMP_MIN_RAW or temp_raw > TEMP_MAX_RAW):
+        try:
+            print(f"[/api/update] BREACH DETECTED: Temp={temp_raw/10}°C. Recording to blockchain...")
+            tx_hash = contract.functions.logData(temp_raw, gps).transact()
+            receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+            print(f"[/api/update] ⛓️  Breach logged at block {receipt['blockNumber']}")
+            
+            # Fetch updated score after breach
             score, _, _ = contract.functions.getUIStatus().call()
             data['score'] = score
-            data['timestamp'] = datetime.now().isoformat()
-        except:
-            pass
+        except Exception as e:
+            print(f"[/api/update] Blockchain write error: {e}")
+    
+    # Broadcast to all WebSocket clients (dashboard will update in real-time)
     await manager.broadcast(data)
-    return {"status": "success"}
+    
+    return {
+        "status": "success",
+        "temp_raw": temp_raw,
+        "temp_celsius": temp_raw / 10,
+        "gps": gps,
+        "score": data.get('score'),
+    }
 
 @app.get("/api/status")
 async def get_status():

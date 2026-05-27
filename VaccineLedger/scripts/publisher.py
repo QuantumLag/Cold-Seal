@@ -26,7 +26,9 @@ w3 = Web3(Web3.HTTPProvider(os.getenv("GANACHE_URL")))
 w3.eth.default_account = w3.eth.accounts[0]
 
 CONTRACT_ADDRESS = os.getenv("CONTRACT_ADDRESS")
-with open("backend/abi.json", "r") as f:
+# Fix relative path: scripts/ is one level deep, so go up to VaccineLedger/, then into backend/
+ABI_PATH = os.path.join(os.path.dirname(__file__), "..", "backend", "abi.json")
+with open(ABI_PATH, "r") as f:
     CONTRACT_ABI = json.load(f)
 
 contract = w3.eth.contract(address=CONTRACT_ADDRESS, abi=CONTRACT_ABI)
