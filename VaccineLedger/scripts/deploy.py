@@ -41,10 +41,15 @@ compiled_sol = compile_standard({
 bytecode = compiled_sol["contracts"]["VaccineQuality.sol"]["VaccineLedger"]["evm"]["bytecode"]["object"]
 abi = compiled_sol["contracts"]["VaccineQuality.sol"]["VaccineLedger"]["abi"]
 
-# Save ABI for the Backend
-os.makedirs("backend", exist_ok=True)
-with open(os.path.join("backend", "abi.json"), "w") as f:
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(SCRIPT_DIR)  # Steps up to VaccineLedger/
+TARGET_BACKEND_DIR = os.path.join(ROOT_DIR, "backend")
+
+# Ensure it writes directly to the actual root backend/ folder
+os.makedirs(TARGET_BACKEND_DIR, exist_ok=True)
+with open(os.path.join(TARGET_BACKEND_DIR, "abi.json"), "w") as f:
     json.dump(abi, f)
+print("🎯 ABI successfully written to root backend/abi.json")
 
 # 3. Deploy
 print("Deploying contract...")
@@ -74,14 +79,15 @@ print(f"🚀 Success! Contract Address: {tx_receipt.contractAddress}")
 # ... (at the very bottom, after your print statement)
 
 # 4. Automatically update the .env file
-env_path = ".env"
+# Force Python to find the .env file in the root directory, no matter where the terminal is run from
+
+env_path = os.path.join(ROOT_DIR, ".env")
 new_address_line = f"CONTRACT_ADDRESS={tx_receipt.contractAddress}\n"
 
 if os.path.exists(env_path):
     with open(env_path, "r") as f:
         lines = f.readlines()
     
-    # Replace the existing line or append if not found
     with open(env_path, "w") as f:
         found = False
         for line in lines:
@@ -92,4 +98,9 @@ if os.path.exists(env_path):
                 f.write(line)
         if not found:
             f.write(new_address_line)
-    print("✅ .env file updated with new address!")
+    print("✅ .env file successfully updated with new address!")
+else:
+    # If .env doesn't exist yet, create it fresh in the root directory
+    with open(env_path, "w") as f:
+        f.write(new_address_line)
+    print("📝 Created fresh .env file in root with contract address!")
