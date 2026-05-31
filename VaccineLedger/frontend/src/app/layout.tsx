@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, Space_Grotesk } from 'next/font/google'
 import './globals.css'
+import { ColdSealProvider } from '@/hooks/useColdSeal'
+import { TopBar } from '@/components/TopBar'
+import { Sidebar } from '@/components/Sidebar'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -8,24 +11,23 @@ const inter = Inter({
   variable: '--font-inter',
 })
 
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-space',
+})
+
 export const metadata: Metadata = {
-  title: 'PharmaTrace | Product Tracking Dashboard',
+  title: 'COLD-SEAL | Live Monitor',
   description:
-    'Professional B2B Supply Chain Management Dashboard with real-time product tracking, blockchain verification, and quality assurance.',
-  keywords: [
-    'product tracking',
-    'supply chain',
-    'blockchain',
-    'monitoring',
-    'dashboard',
-    'pharmaceutical',
-  ],
+    'COLD-SEAL is a real-time vaccine cold-chain monitoring system with IoT telemetry and blockchain integrity auditing.',
+  keywords: ['cold chain', 'vaccine', 'iot', 'blockchain', 'monitoring', 'dashboard'],
 }
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1.0,
-  themeColor: '#f4f6f9',
+  themeColor: '#0A0A0F',
 }
 
 export default function RootLayout({
@@ -34,8 +36,22 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={inter.variable}>
-      <body>{children}</body>
+    <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
+      <body className="min-h-screen bg-cold-bg text-cold-text">
+        <ColdSealProvider>
+          <div className="min-h-screen">
+            <TopBar />
+            <div className="flex">
+              <Sidebar />
+              <main className="flex-1 min-h-screen pt-[60px] md:pl-[220px] px-6 pb-10">
+                <div className="relative z-10 max-w-[1400px] mx-auto">
+                  {children}
+                </div>
+              </main>
+            </div>
+          </div>
+        </ColdSealProvider>
+      </body>
     </html>
   )
 }

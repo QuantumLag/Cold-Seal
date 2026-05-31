@@ -1,4 +1,4 @@
-@import url('https://rsms.me/inter/inter.css');
+@import "leaflet/dist/leaflet.css";
 
 @tailwind base;
 @tailwind components;
@@ -7,7 +7,8 @@
 @layer base {
   :root {
     --font-inter: 'Inter', system-ui, sans-serif;
-    color-scheme: light;
+    --font-space: 'Space Grotesk', system-ui, sans-serif;
+    color-scheme: dark;
   }
 
   html {
@@ -15,7 +16,22 @@
   }
 
   body {
-    @apply bg-bg-primary text-text-primary font-sans;
+    background-color: theme('colors.cold-bg');
+    color: theme('colors.cold-text');
+    font-family: theme('fontFamily.sans');
+    background-image: radial-gradient(1200px 500px at 10% 0%, rgba(245, 166, 35, 0.06), transparent 40%),
+      radial-gradient(900px 400px at 90% 20%, rgba(255, 107, 53, 0.05), transparent 45%);
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.06;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/></filter><rect width="120" height="120" filter="url(%23noise)" opacity="0.6"/></svg>');
+    mix-blend-mode: screen;
+    z-index: 0;
   }
 
   /* Scrollbar styling */
@@ -29,58 +45,45 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: rgba(156, 163, 175, 0.3);
+    background: rgba(255, 180, 50, 0.2);
     border-radius: 4px;
 
     &:hover {
-      background: rgba(156, 163, 175, 0.5);
+      background: rgba(255, 180, 50, 0.35);
     }
   }
 
   /* Firefox scrollbar */
   * {
-    scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+    scrollbar-color: rgba(255, 180, 50, 0.25) transparent;
     scrollbar-width: thin;
   }
 }
 
 @layer components {
-  /* Light mode card styling */
-  .light-card {
-    @apply rounded-lg border border-border-light bg-white shadow-card-shadow transition-all duration-300 hover:shadow-card-shadow-hover;
+  .glass-card {
+    @apply rounded-2xl border border-cold-border bg-cold-panel/85 shadow-card-shadow backdrop-blur-xl;
   }
 
-  /* Metric card shine effect */
-  .metric-card-shine {
-    @apply relative overflow-hidden;
-
-    &::after {
-      @apply absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-10 transition-opacity duration-500;
-      content: '';
-    }
+  .glass-card-hover {
+    @apply transition-all duration-300;
   }
 
-  /* Status badges */
-  .status-badge-healthy {
-    @apply bg-emerald-400/10 border border-emerald-500/30 text-emerald-400;
+  .glass-card-hover:hover {
+    border-color: rgba(245, 166, 35, 0.35);
+    box-shadow: 0 0 24px rgba(245, 166, 35, 0.08), 0 12px 40px rgba(0, 0, 0, 0.55);
   }
 
-  .status-badge-warning {
-    @apply bg-amber-400/10 border border-amber-500/30 text-amber-400;
+  .chip-amber {
+    @apply bg-[rgba(245,166,35,0.1)] text-cold-amber border border-[rgba(245,166,35,0.25)];
   }
 
-  .status-badge-critical {
-    @apply bg-red-400/10 border border-red-500/30 text-red-400;
+  .chip-green {
+    @apply bg-[rgba(0,214,143,0.1)] text-cold-green border border-[rgba(0,214,143,0.3)];
   }
 
-  /* Smooth transitions */
-  .transition-smooth {
-    @apply transition-all duration-300 ease-out;
-  }
-
-  /* Gradient text */
-  .gradient-text {
-    @apply bg-gradient-to-r from-emerald-400 to-blue-500 bg-clip-text text-transparent;
+  .chip-orange {
+    @apply bg-[rgba(255,107,53,0.15)] text-cold-orange border border-[rgba(255,107,53,0.35)];
   }
 }
 
@@ -126,6 +129,15 @@
 
   .animate-chart-appear {
     animation: chart-appear 0.6s ease-out;
+  }
+
+  .text-hero {
+    font-size: 48px;
+    font-weight: 700;
+    font-family: var(--font-space);
+    background: linear-gradient(120deg, #F5A623, #FFB432);
+    -webkit-background-clip: text;
+    color: transparent;
   }
 }
 

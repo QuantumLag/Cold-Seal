@@ -1,142 +1,94 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import {
-  Menu,
-  X,
-  BarChart3,
-  Shield,
-  Zap,
-  Sigma,
+  LayoutDashboard,
+  MapPin,
+  ShieldCheck,
+  Activity,
+  BarChart2,
   Settings,
-  LogOut,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-interface NavItem {
-  label: string
-  icon: React.ReactNode
-  href: string
-  badge?: number
-  active?: boolean
-}
+const navItems = [
+  { label: 'Live Monitor', href: '/', icon: LayoutDashboard },
+  { label: 'GPS Tracker', href: '/map', icon: MapPin },
+  { label: 'Ledger Audit', href: '/audit', icon: ShieldCheck },
+  { label: 'Anomaly Log', href: '/anomaly', icon: Activity },
+  { label: 'Analytics', href: '/analytics', icon: BarChart2 },
+]
 
-interface SidebarProps {
-  isOpen: boolean
-  onToggle: (open: boolean) => void
-}
-
-export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
-  const navItems: NavItem[] = [
-    {
-      label: 'Track and Trace',
-      icon: <BarChart3 size={18} />,
-      href: '#',
-      active: true,
-    },
-    {
-      label: 'Serialization',
-      icon: <Shield size={18} />,
-      href: '#',
-    },
-    {
-      label: 'Transactions',
-      icon: <Zap size={18} />,
-      href: '#',
-      badge: 12,
-    },
-    {
-      label: 'Reporting',
-      icon: <Sigma size={18} />,
-      href: '#',
-    },
-    {
-      label: 'CryptoWallet',
-      icon: <Sigma size={18} />,
-      href: '#',
-    },
-  ]
+export const Sidebar: React.FC = () => {
+  const pathname = usePathname()
+  const [simulationMode, setSimulationMode] = useState(true)
 
   return (
-    <>
-      {/* Mobile toggle button */}
-      <button
-        onClick={() => onToggle(!isOpen)}
-        className="fixed top-4 left-4 z-50 md:hidden p-2 hover:bg-blue-100 rounded-lg transition-colors"
-      >
-        {isOpen ? <X size={24} className="text-text-primary" /> : <Menu size={24} className="text-text-primary" />}
-      </button>
+    <aside className="fixed left-0 top-0 h-screen w-[220px] bg-[#0D0D14] border-r border-[rgba(255,180,50,0.08)] hidden md:flex flex-col z-20">
+      <div className="h-[60px] px-5 flex items-center border-b border-[rgba(255,180,50,0.08)]">
+        <div className="text-sm font-semibold text-cold-text font-display">COLD-SEAL</div>
+      </div>
 
-      {/* Overlay for mobile */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/20 z-30 md:hidden"
-          onClick={() => onToggle(false)}
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          'fixed left-0 top-0 h-screen w-64 z-40',
-          'bg-sidebar-navy',
-          'flex flex-col',
-          'transition-transform duration-300 ease-out md:translate-x-0',
-          isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-        )}
-      >
-        {/* Logo / Branding */}
-        <div className="p-6 border-b border-white/10">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-accent-blue flex items-center justify-center">
-              <Shield size={18} className="text-white font-bold" />
-            </div>
-            <div>
-              <p className="font-semibold text-white text-sm">PharmaTrace</p>
-              <p className="text-xs text-white/60">v1.0</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-4 px-3">
-          {navItems.map((item, index) => (
-            <a
-              key={index}
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+        {navItems.map((item) => {
+          const active = pathname === item.href
+          const Icon = item.icon
+          return (
+            <Link
+              key={item.label}
               href={item.href}
-              onClick={(e) => e.preventDefault()}
               className={cn(
-                'group flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 mb-1',
-                item.active
-                  ? 'bg-accent-blue/20 text-white'
-                  : 'text-white/70 hover:text-white hover:bg-white/10'
+                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all',
+                active
+                  ? 'text-cold-amber bg-[rgba(245,166,35,0.06)] border-l-[3px] border-cold-amber'
+                  : 'text-cold-muted hover:text-cold-text hover:bg-white/5'
               )}
             >
-              <span className="text-lg">
-                {item.icon}
-              </span>
-              <span className="text-sm font-medium flex-1">{item.label}</span>
-              {item.badge && (
-                <span className="px-2 py-0.5 bg-red-500/20 text-red-200 text-xs rounded-full font-medium">
-                  {item.badge}
-                </span>
-              )}
-            </a>
-          ))}
-        </nav>
+              <Icon size={18} />
+              <span>{item.label}</span>
+            </Link>
+          )
+        })}
 
-        {/* Footer actions */}
-        <div className="border-t border-white/10 p-3 space-y-1">
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200">
-            <Settings size={18} />
-            <span className="text-sm font-medium">Settings</span>
-          </button>
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200">
-            <LogOut size={18} />
-            <span className="text-sm font-medium">Disconnect</span>
-          </button>
+        <div className="my-4 border-t border-[rgba(255,180,50,0.1)]" />
+
+        <Link
+          href="/settings"
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-cold-muted hover:text-cold-text hover:bg-white/5 transition"
+        >
+          <Settings size={18} />
+          <span>Settings</span>
+        </Link>
+      </nav>
+
+      <div className="p-4 border-t border-[rgba(255,180,50,0.08)]">
+        <div className="glass-card p-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-cold-muted uppercase tracking-widest">Simulation Mode</p>
+              <p className="text-xs text-cold-text mt-1">Telemetry sandbox</p>
+            </div>
+            <button
+              onClick={() => setSimulationMode((prev) => !prev)}
+              className={cn(
+                'w-10 h-6 rounded-full border transition relative',
+                simulationMode
+                  ? 'bg-[rgba(245,166,35,0.25)] border-[rgba(245,166,35,0.6)]'
+                  : 'bg-white/5 border-white/10'
+              )}
+            >
+              <span
+                className={cn(
+                  'absolute top-0.5 w-5 h-5 rounded-full transition',
+                  simulationMode ? 'left-4 bg-cold-amber' : 'left-0.5 bg-white/40'
+                )}
+              />
+            </button>
+          </div>
         </div>
-      </aside>
-    </>
+      </div>
+    </aside>
   )
 }

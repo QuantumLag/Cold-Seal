@@ -59,14 +59,17 @@ class ConnectionManager:
         """
         Broadcast telemetry message to all connected WebSocket clients.
         
-        Expected message format:
+        Expected message format includes:
         {
             'temp': int (raw ×10, e.g., 55 = 5.5°C),
             'humidity': float (0-100%),
             'gps': string (e.g., "12.9716,77.5946"),
             'status': string (e.g., "🚨 BREACH" or "✅ SAFE"),
             'timestamp': string (ISO format or HH:MM:SS),
-            'score': int (0-100, integrity percentage)
+            'score': int (0-100, SLA compliance percentage),
+            'viability': float (0-100, biological vaccine health),
+            'recommendation': string (clinical usage advice),
+            'expires_in_hours': float (predicted shelf life remaining)
         }
         """
         # Ensure all required keys are present
@@ -77,6 +80,9 @@ class ConnectionManager:
             'status': message.get('status', ''),
             'timestamp': message.get('timestamp', datetime.now().isoformat()),
             'score': message.get('score'),
+            'viability': message.get('viability'),
+            'recommendation': message.get('recommendation'),
+            'expires_in_hours': message.get('expires_in_hours'),
         }
         
         # Store in message queue (last 100 messages for diagnostics)

@@ -9,35 +9,31 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Light mode B2B palette
-        'bg-primary': '#f4f6f9',
-        'bg-secondary': '#ffffff',
-        'sidebar-navy': '#1e3a8a',
-        'sidebar-navy-hover': '#1e40af',
-        'text-primary': '#1f2937',
-        'text-secondary': '#6b7280',
-        'border-light': '#e5e7eb',
-        'accent-blue': '#00a3e0',
-        'accent-blue-hover': '#0088bb',
-        'status-success': '#dcfce7',
-        'status-success-text': '#166534',
-        'status-warning': '#fef3c7',
-        'status-warning-text': '#92400e',
-        'status-error': '#fee2e2',
-        'status-error-text': '#991b1b',
+        'cold-bg': '#0A0A0F',
+        'cold-panel': '#111118',
+        'cold-border': 'rgba(255, 180, 50, 0.12)',
+        'cold-amber': '#F5A623',
+        'cold-amber-strong': '#FFB432',
+        'cold-orange': '#FF6B35',
+        'cold-green': '#00D68F',
+        'cold-text': '#F0F0F0',
+        'cold-muted': '#888899',
+        'cold-glow': 'rgba(245, 166, 35, 0.15)',
       },
       backdropBlur: {
         xs: '2px',
         sm: '4px',
       },
       boxShadow: {
-        'card-shadow': '0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04)',
-        'card-shadow-hover': '0 4px 12px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06)',
+        'card-shadow': '0 0 0 1px rgba(255,180,50,0.05), 0 8px 32px rgba(0,0,0,0.4)',
+        'card-shadow-hover': '0 0 24px rgba(245,166,35,0.08), 0 12px 40px rgba(0,0,0,0.55)',
       },
       animation: {
         pulse: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         shimmer: 'shimmer 2s infinite',
         slide: 'slide 0.3s ease-out',
+        breathe: 'breathe 2s ease-in-out infinite',
+        'breach-pulse': 'breach-pulse 1.5s ease-in-out infinite',
       },
       keyframes: {
         shimmer: {
@@ -48,9 +44,18 @@ const config: Config = {
           '0%': { transform: 'translateY(-8px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
         },
+        breathe: {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.35' },
+        },
+        'breach-pulse': {
+          '0%, 100%': { boxShadow: '0 0 0 0 rgba(255,107,53,0.4)' },
+          '50%': { boxShadow: '0 0 0 8px rgba(255,107,53,0)' },
+        },
       },
       fontFamily: {
         sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-space)', 'system-ui', 'sans-serif'],
       },
     },
   },

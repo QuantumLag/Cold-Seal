@@ -1,65 +1,56 @@
 'use client'
 
 import React from 'react'
-import { Wifi, WifiOff, Search, Bell } from 'lucide-react'
-import { SystemStatus } from '@/types'
+import { Bell, Shield, Wifi, Snowflake } from 'lucide-react'
+import { useColdSeal } from '@/hooks/useColdSeal'
 
-interface TopBarProps {
-  status: SystemStatus
-}
-
-export const TopBar: React.FC<TopBarProps> = ({ status }) => {
+export const TopBar: React.FC = () => {
+  const { connectionStatus } = useColdSeal()
+  const isLive = connectionStatus === 'live'
 
   return (
-    <div className="sticky top-0 z-30 border-b border-border-light bg-white">
-      <div className="px-6 py-4 flex items-center justify-between gap-4">
-        {/* Left: Search and Status */}
-        <div className="flex items-center gap-4 flex-1">
-          {/* Search */}
-          <div className="relative hidden md:flex flex-1 max-w-xs">
-            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-secondary" />
-            <input
-              type="text"
-              placeholder="Search here..."
-              className="w-full pl-10 pr-4 py-2 bg-bg-primary border border-border-light rounded-lg text-sm text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent"
-            />
+    <div className="sticky top-0 z-30 h-[60px] border-b border-[rgba(255,180,50,0.1)] bg-cold-bg/95 backdrop-blur">
+      <div className="h-full px-6 flex items-center justify-between gap-4">
+        {/* Left */}
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl border border-[rgba(245,166,35,0.3)] bg-[rgba(245,166,35,0.08)] flex items-center justify-center">
+            <Shield size={18} className="text-cold-amber" />
           </div>
-
-          {/* Edge Node Sync */}
-          <div className="flex items-center gap-2 px-3 py-2 bg-bg-primary border border-border-light rounded-lg">
-            {status.edgeNodeSync === 100 ? (
-              <Wifi size={14} className="text-green-600" />
-            ) : (
-              <WifiOff size={14} className="text-orange-600" />
-            )}
-            <span className="text-xs font-medium text-text-primary">
-              Edge Node: <span className="text-accent-blue">{status.edgeNodeSync}%</span>
-            </span>
+          <div>
+            <div className="flex items-center gap-2">
+              <Snowflake size={16} className="text-cold-amber" />
+              <p className="text-sm font-semibold text-cold-text font-display tracking-wide">COLD-SEAL</p>
+            </div>
+            <p className="text-[10px] text-cold-muted">Monitor v1.0</p>
           </div>
         </div>
 
-        {/* Right: Actions and Profile */}
-        <div className="flex items-center gap-3">
-          {/* Balance Pill */}
-          <div className="flex items-center gap-2 px-4 py-2 bg-bg-primary border border-border-light rounded-full">
-            <div className="w-2 h-2 rounded-full bg-green-600" />
-            <span className="text-xs font-semibold text-text-primary">$500 PT</span>
-            <span className="text-xs text-text-secondary">CryptoWallet Balance</span>
+        {/* Center */}
+        <div className="hidden md:flex items-center gap-3">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-[rgba(0,214,143,0.3)] bg-[rgba(0,214,143,0.1)] text-cold-green text-xs">
+            <Wifi size={14} />
+            <span>Edge Node: 100%</span>
           </div>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-[rgba(245,166,35,0.25)] bg-[rgba(245,166,35,0.1)] text-cold-amber text-xs">
+            <span>⬡</span>
+            <span>Chain: 1337</span>
+          </div>
+        </div>
 
-          {/* Notification */}
-          <button className="p-2 hover:bg-bg-primary rounded-lg transition-colors relative">
-            <Bell size={18} className="text-text-secondary" />
-            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500"></span>
+        {/* Right */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-xs text-cold-green">
+            <span className={`text-[10px] ${isLive ? 'animate-breathe' : ''}`}>●</span>
+            <span>{isLive ? 'Live' : 'Offline'}</span>
+          </div>
+          <div className="h-6 w-px bg-[rgba(255,180,50,0.15)]" />
+          <button className="relative p-2 rounded-lg hover:bg-white/5 transition">
+            <Bell size={18} className="text-cold-muted" />
+            <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-cold-amber" />
           </button>
-
-          {/* User Profile */}
-          <button className="flex items-center gap-2 px-3 py-2 hover:bg-bg-primary rounded-lg transition-colors">
-            <div className="w-8 h-8 rounded-full bg-accent-blue flex items-center justify-center text-white font-semibold text-sm">
-              SK
-            </div>
-            <span className="hidden sm:inline text-sm font-medium text-text-primary">Satchit</span>
-          </button>
+          <div className="w-9 h-9 rounded-full bg-[rgba(245,166,35,0.2)] border border-[rgba(245,166,35,0.5)] flex items-center justify-center text-sm font-semibold text-cold-amber">
+            SK
+          </div>
         </div>
       </div>
     </div>
