@@ -95,7 +95,4 @@ void updateQualityScore() {
     Serial.print(metrics.predictedExpiry / 3600);
     Serial.println(" hours");
     Serial.println(metrics.recommendation);
-    
-    // Send to blockchain
-    sendQualityToBlockchain(metrics);
 }

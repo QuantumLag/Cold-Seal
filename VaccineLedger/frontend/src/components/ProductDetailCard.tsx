@@ -2,133 +2,75 @@
 
 import React from 'react'
 
-interface DetailData {
-  productId: string
-  productName: string
-  senderDetail: {
-    code: string
-    name: string
-    email: string
-  }
-  receiverDetail: {
-    code: string
-    name: string
-    email: string
-  }
-  quantity: number
-  collection: string
-  publicKey: string
-  cryptoHash: string
+export interface BreachLogDetail {
+  id: string
   timestamp: string
-  temperature: string
-  humidity: string
+  temperatureRaw: number
+  temperatureC: number
+  gps: string
+  integrity: number
+  status: 'SAFE' | 'BREACH'
+  txHash?: string
+  blockHeight?: number
 }
 
 interface ProductDetailCardProps {
-  data?: DetailData | null
+  log?: BreachLogDetail | null
 }
 
-export const ProductDetailCard: React.FC<ProductDetailCardProps> = ({ data }) => {
-  if (!data) {
+export const ProductDetailCard: React.FC<ProductDetailCardProps> = ({ log }) => {
+  if (!log) {
     return (
       <div className="bg-white rounded-lg border border-border-light shadow-card-shadow p-6 h-full flex items-center justify-center">
-        <p className="text-text-secondary text-sm">Select a product to view details</p>
+        <p className="text-text-secondary text-sm">
+          Select a breach event to view cryptographic audit details.
+        </p>
       </div>
     )
   }
 
+  const receiptLines = [
+    `TxHash: ${log.txHash ?? '0x9f1c...b7a1'}`,
+    `Block: ${log.blockHeight ?? 'pending'}`,
+    `LogIndex: ${log.id}`,
+    `Integrity: ${log.integrity.toFixed(2)}`,
+    `Status: ${log.status}`,
+  ]
+
   return (
     <div className="bg-white rounded-lg border border-border-light shadow-card-shadow p-6 h-full overflow-y-auto">
-      {/* Product Header */}
       <div className="mb-6 pb-4 border-b border-border-light">
-        <h3 className="text-lg font-semibold text-text-primary mb-1">
-          #{data.productId} - {data.productName}
-        </h3>
+        <h3 className="text-lg font-semibold text-text-primary mb-1">Breach Log {log.id}</h3>
+        <p className="text-sm text-text-secondary">{log.timestamp}</p>
       </div>
 
-      {/* Detail Sections */}
       <div className="space-y-6">
-        {/* Sender Detail */}
         <div>
-          <h4 className="text-sm font-semibold text-text-primary mb-3">Sender Detail</h4>
-          <div className="space-y-2 pl-3 border-l-2 border-accent-blue">
-            <div>
-              <p className="text-xs text-text-secondary">Code</p>
-              <p className="text-sm font-medium text-text-primary">{data.senderDetail.code}</p>
-            </div>
-            <div>
-              <p className="text-xs text-text-secondary">Name</p>
-              <p className="text-sm font-medium text-text-primary">{data.senderDetail.name}</p>
-            </div>
-            <div>
-              <p className="text-xs text-text-secondary">Email</p>
-              <p className="text-sm text-text-primary">{data.senderDetail.email}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Receiver Detail */}
-        <div>
-          <h4 className="text-sm font-semibold text-text-primary mb-3">Receiver Detail</h4>
-          <div className="space-y-2 pl-3 border-l-2 border-accent-blue">
-            <div>
-              <p className="text-xs text-text-secondary">Code</p>
-              <p className="text-sm font-medium text-text-primary">{data.receiverDetail.code}</p>
-            </div>
-            <div>
-              <p className="text-xs text-text-secondary">Name</p>
-              <p className="text-sm font-medium text-text-primary">{data.receiverDetail.name}</p>
-            </div>
-            <div>
-              <p className="text-xs text-text-secondary">Email</p>
-              <p className="text-sm text-text-primary">{data.receiverDetail.email}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Metrics */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-bg-primary rounded-lg p-3">
-            <p className="text-xs text-text-secondary mb-1">Quantity</p>
-            <p className="text-lg font-semibold text-text-primary">{data.quantity}</p>
-          </div>
-          <div className="bg-bg-primary rounded-lg p-3">
-            <p className="text-xs text-text-secondary mb-1">Collection</p>
-            <p className="text-lg font-semibold text-text-primary">{data.collection}</p>
-          </div>
-        </div>
-
-        {/* Blockchain Data */}
-        <div>
-          <h4 className="text-sm font-semibold text-text-primary mb-3">Blockchain Data</h4>
+          <h4 className="text-sm font-semibold text-text-primary mb-3">Telemetry Details</h4>
           <div className="space-y-3 bg-bg-primary rounded-lg p-4">
             <div>
-              <p className="text-xs text-text-secondary mb-1">Public Key</p>
-              <p className="text-xs font-mono text-text-primary break-all">{data.publicKey}</p>
+              <p className="text-xs text-text-secondary mb-1">Temperature (C)</p>
+              <p className="text-sm font-semibold text-text-primary">
+                {log.temperatureC.toFixed(1)} C (raw {log.temperatureRaw})
+              </p>
             </div>
             <div>
-              <p className="text-xs text-text-secondary mb-1">CryptoHash</p>
-              <p className="text-xs font-mono text-text-primary break-all">{data.cryptoHash}</p>
+              <p className="text-xs text-text-secondary mb-1">GPS Coordinates</p>
+              <p className="text-sm text-text-primary break-words">{log.gps}</p>
             </div>
             <div>
-              <p className="text-xs text-text-secondary mb-1">Timestamp</p>
-              <p className="text-xs text-text-primary">{data.timestamp}</p>
+              <p className="text-xs text-text-secondary mb-1">Integrity Post-Breach</p>
+              <p className="text-sm font-semibold text-text-primary">{log.integrity.toFixed(2)}</p>
             </div>
           </div>
         </div>
 
-        {/* Environmental Data */}
         <div>
-          <h4 className="text-sm font-semibold text-text-primary mb-3">Environmental Conditions</h4>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-bg-primary rounded-lg p-3">
-              <p className="text-xs text-text-secondary mb-1">Temperature</p>
-              <p className="text-sm font-semibold text-text-primary">{data.temperature}</p>
-            </div>
-            <div className="bg-bg-primary rounded-lg p-3">
-              <p className="text-xs text-text-secondary mb-1">Humidity</p>
-              <p className="text-sm font-semibold text-text-primary">{data.humidity}</p>
-            </div>
+          <h4 className="text-sm font-semibold text-text-primary mb-3">Blockchain Anchor Metadata</h4>
+          <div className="bg-slate-900 text-emerald-200 rounded-lg p-4 text-xs font-mono leading-relaxed">
+            {receiptLines.map((line) => (
+              <div key={line}>{line}</div>
+            ))}
           </div>
         </div>
       </div>

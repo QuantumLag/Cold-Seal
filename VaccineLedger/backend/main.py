@@ -8,6 +8,7 @@ from web3 import Web3
 from dotenv import load_dotenv
 from typing import List
 from datetime import datetime
+from predictive_degradation.arrhenius_engine import predictor
 
 # 1. PATH CONFIGURATION
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -257,19 +258,36 @@ async def update_data(data: dict):
     }
     
     This endpoint:
-    1. Adds the current blockchain integrity score
-    2. Logs temperature breaches to blockchain (if applicable)
-    3. Broadcasts the enriched payload to all WebSocket-connected dashboard clients
+    1. Runs the native Python Arrhenius Degradation Model on the telemetry feed
+    2. Adds the current contractual blockchain integrity score
+    3. Logs temperature breaches to Ganache blockchain (if applicable)
+    4. Broadcasts the enriched payload to all WebSocket-connected Next.js dashboard clients
     """
-    # Extract temperature (raw format: ×10)
+    # 1. EXTRACT DATA & INTERPRET RAW FIELDS
     temp_raw = data.get('temp', 0)
     gps = data.get('gps', '0,0')
-    
-    # Fetch current blockchain state
+    temp_celsius = temp_raw / 10.0  # Convert scaled integer (e.g., 55) back to float (5.5°C) for formulas
+
+    # 2. RUN ARRHENIUS PREDICTIVE DEGRADATION CALCULATIONS
+    try:
+        from predictive_degradation.arrhenius_engine import predictor
+        metrics = predictor.calculate_quality(temp_celsius)
+        
+        # Inject the scientific results into the main data payload dictionary
+        data['viability'] = metrics['qualityScore']
+        data['recommendation'] = metrics['recommendation']
+        data['expires_in_hours'] = round(metrics['predictedExpiry'] / 3600, 1)
+    except Exception as e:
+        print(f"[/api/update] Arrhenius Engine Calculation Error: {e}")
+        data['viability'] = 100.0
+        data['recommendation'] = "Calculation unavailable"
+        data['expires_in_hours'] = 0.0
+
+    # 3. FETCH CURRENT CONTRACTUAL BLOCKCHAIN INTEGRITY SCORE
     if contract:
         try:
             score, last_temp, last_gps = contract.functions.getUIStatus().call()
-            data['score'] = score  # 0-100 percentage
+            data['score'] = score  # 0-100 compliance percentage
         except Exception as e:
             print(f"[/api/update] Blockchain read error: {e}")
             data['score'] = None
@@ -278,29 +296,33 @@ async def update_data(data: dict):
     if 'timestamp' not in data or not data['timestamp']:
         data['timestamp'] = datetime.now().isoformat()
     
-    # Log breach to blockchain if temperature is outside safe zone
+    # 4. LOG BREACH TO BLOCKCHAIN IF TEMPERATURE IS OUTSIDE SAFE ZONE (2.0°C - 8.0°C)
     if contract and (temp_raw < TEMP_MIN_RAW or temp_raw > TEMP_MAX_RAW):
         try:
-            print(f"[/api/update] BREACH DETECTED: Temp={temp_raw/10}°C. Recording to blockchain...")
-            tx_hash = contract.functions.logData(temp_raw, gps).transact()
+            print(f"[/api/update] BREACH DETECTED: Temp={temp_celsius}°C. Recording violation to Ganache...")
+            tx_hash = contract.functions.logData(temp_raw, gps).transact({"from": w3.eth.accounts[0]})
             receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
             print(f"[/api/update] ⛓️  Breach logged at block {receipt['blockNumber']}")
             
-            # Fetch updated score after breach
+            # Fetch the updated blockchain status immediately after mining the drop
             score, _, _ = contract.functions.getUIStatus().call()
             data['score'] = score
         except Exception as e:
             print(f"[/api/update] Blockchain write error: {e}")
     
-    # Broadcast to all WebSocket clients (dashboard will update in real-time)
+    # 5. LIVE DISTRIBUTED BROADCAST OVER OPEN WEBSOCKET
+    # Next.js will catch all of these variables concurrently in real time!
     await manager.broadcast(data)
     
     return {
         "status": "success",
         "temp_raw": temp_raw,
-        "temp_celsius": temp_raw / 10,
+        "temp_celsius": temp_celsius,
         "gps": gps,
         "score": data.get('score'),
+        "viability": data.get('viability'),
+        "recommendation": data.get('recommendation'),
+        "expires_in_hours": data.get('expires_in_hours')
     }
 
 @app.get("/api/status")

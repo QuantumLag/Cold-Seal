@@ -3,159 +3,99 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
 
-interface Product {
+export interface BreachLog {
   id: string
-  shipmentDate: string
-  lot: string
-  sender: string
-  receiver: string
-  status: 'delivered' | 'pending' | 'in-transit'
+  timestamp: string
+  temperatureRaw: number
+  temperatureC: number
+  gps: string
+  integrity: number
+  status: 'SAFE' | 'BREACH'
+  txHash?: string
+  blockHeight?: number
 }
 
 interface ProductTableProps {
-  onSelectRow?: (product: Product) => void
+  logs: BreachLog[]
+  onSelectRow?: (log: BreachLog) => void
   selectedId?: string
 }
 
-const mockProducts: Product[] = [
-  {
-    id: '1',
-    shipmentDate: '19 Jan 2017',
-    lot: '72608',
-    sender: 'Sender Name',
-    receiver: 'Receiver Name',
-    status: 'pending',
-  },
-  {
-    id: '2',
-    shipmentDate: '11 Jan 2017',
-    lot: '72608',
-    sender: 'Dummy Sender',
-    receiver: 'Dummy Receiver',
-    status: 'delivered',
-  },
-  {
-    id: '3',
-    shipmentDate: '19 Jan 2017',
-    lot: '72608',
-    sender: 'Sender Name',
-    receiver: 'Receiver Name',
-    status: 'pending',
-  },
-  {
-    id: '4',
-    shipmentDate: '11 Jan 2017',
-    lot: '72608',
-    sender: 'Dummy Sender',
-    receiver: 'Dummy Receiver',
-    status: 'delivered',
-  },
-  {
-    id: '5',
-    shipmentDate: '19 Jan 2017',
-    lot: '72608',
-    sender: 'Sender Name',
-    receiver: 'Receiver Name',
-    status: 'pending',
-  },
-]
+const getStatusStyle = (status: 'SAFE' | 'BREACH') => {
+  if (status === 'BREACH') {
+    return {
+      badge: 'bg-red-100 text-red-700 border border-red-200',
+      label: 'BREACH',
+    }
+  }
 
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'delivered':
-      return {
-        badge: 'bg-status-success',
-        text: 'text-status-success-text',
-        label: 'DELIVERED',
-      }
-    case 'pending':
-      return {
-        badge: 'bg-status-warning',
-        text: 'text-status-warning-text',
-        label: 'DISPATCH',
-      }
-    case 'in-transit':
-      return {
-        badge: 'bg-status-warning',
-        text: 'text-status-warning-text',
-        label: 'IN TRANSIT',
-      }
-    default:
-      return {
-        badge: 'bg-gray-100',
-        text: 'text-gray-600',
-        label: 'UNKNOWN',
-      }
+  return {
+    badge: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
+    label: 'SAFE',
   }
 }
 
-export const ProductTable: React.FC<ProductTableProps> = ({ 
+export const ProductTable: React.FC<ProductTableProps> = ({
+  logs,
   onSelectRow,
-  selectedId
+  selectedId,
 }) => {
   return (
     <div className="bg-white rounded-lg border border-border-light shadow-card-shadow overflow-hidden">
-      {/* Table header */}
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b border-border-light bg-bg-primary">
-              <th className="px-6 py-4 text-left text-sm font-semibold text-text-primary">
-                Shipment Date
-              </th>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-text-primary">
-                LOT
-              </th>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-text-primary">
-                Sender
-              </th>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-text-primary">
-                Receiver
-              </th>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-text-primary">
-                Status
-              </th>
+              <th className="px-6 py-4 text-left text-sm font-semibold text-text-primary">Log ID</th>
+              <th className="px-6 py-4 text-left text-sm font-semibold text-text-primary">Timestamp</th>
+              <th className="px-6 py-4 text-left text-sm font-semibold text-text-primary">Temperature (C)</th>
+              <th className="px-6 py-4 text-left text-sm font-semibold text-text-primary">GPS Coordinates</th>
+              <th className="px-6 py-4 text-left text-sm font-semibold text-text-primary">Integrity Post-Breach</th>
+              <th className="px-6 py-4 text-left text-sm font-semibold text-text-primary">Status Badge</th>
             </tr>
           </thead>
           <tbody>
-            {mockProducts.map((product, index) => {
-              const statusInfo = getStatusColor(product.status)
-              const isSelected = selectedId === product.id
-              
-              return (
-                <tr
-                  key={product.id}
-                  onClick={() => onSelectRow?.(product)}
-                  className={cn(
-                    'border-b border-border-light cursor-pointer transition-colors',
-                    index % 2 === 0 ? 'bg-white' : 'bg-bg-primary/30',
-                    isSelected ? 'bg-accent-blue/5 border-l-4 border-l-accent-blue' : 'hover:bg-bg-primary/50'
-                  )}
-                >
-                  <td className="px-6 py-4 text-sm text-text-primary">
-                    {product.shipmentDate}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-text-primary font-medium">
-                    {product.lot}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-text-primary">
-                    {product.sender}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-text-primary">
-                    {product.receiver}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={cn(
-                      'inline-block px-3 py-1 rounded-full text-xs font-semibold',
-                      statusInfo.badge,
-                      statusInfo.text
-                    )}>
-                      {statusInfo.label}
-                    </span>
-                  </td>
-                </tr>
-              )
-            })}
+            {logs.length === 0 ? (
+              <tr>
+                <td className="px-6 py-10 text-sm text-text-secondary" colSpan={6}>
+                  Waiting for live telemetry events...
+                </td>
+              </tr>
+            ) : (
+              logs.map((log, index) => {
+                const statusStyle = getStatusStyle(log.status)
+                const isSelected = selectedId === log.id
+
+                return (
+                  <tr
+                    key={`${log.id}-${index}`}
+                    onClick={() => onSelectRow?.(log)}
+                    className={cn(
+                      'border-b border-border-light cursor-pointer transition-colors',
+                      index % 2 === 0 ? 'bg-white' : 'bg-bg-primary/30',
+                      isSelected
+                        ? 'bg-accent-blue/10 border-l-4 border-l-accent-blue'
+                        : 'hover:bg-bg-primary/50'
+                    )}
+                  >
+                    <td className="px-6 py-4 text-sm text-text-primary font-medium">{log.id}</td>
+                    <td className="px-6 py-4 text-sm text-text-primary">{log.timestamp}</td>
+                    <td className="px-6 py-4 text-sm text-text-primary">
+                      {log.temperatureC.toFixed(1)}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-text-primary">{log.gps}</td>
+                    <td className="px-6 py-4 text-sm text-text-primary font-semibold">
+                      {log.integrity.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={cn('inline-flex px-3 py-1 rounded-full text-xs font-semibold', statusStyle.badge)}>
+                        {statusStyle.label}
+                      </span>
+                    </td>
+                  </tr>
+                )
+              })
+            )}
           </tbody>
         </table>
       </div>
