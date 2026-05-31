@@ -13,6 +13,10 @@ export interface BreachLog {
   status: 'SAFE' | 'BREACH'
   txHash?: string
   blockHeight?: number
+  score?: number
+  viability?: number
+  recommendation?: string
+  expiresInHours?: number
 }
 
 interface ProductTableProps {

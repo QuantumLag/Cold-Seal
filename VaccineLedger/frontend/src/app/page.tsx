@@ -34,8 +34,9 @@ const normalizeTelemetry = (payload: any): BreachLog | null => {
     return null
   }
 
+  const data = payload.data || payload
   const rawTemp = Number(
-    payload.temperature ?? payload.temp ?? payload.temperature_raw ?? payload.temp_raw
+    data.temperature ?? data.temp ?? data.temperature_raw ?? data.temp_raw
   )
 
   if (Number.isNaN(rawTemp)) {
@@ -43,20 +44,28 @@ const normalizeTelemetry = (payload: any): BreachLog | null => {
   }
 
   const temperatureC = rawTemp / 10
-  const integrity = Number(payload.integrity_post_breach ?? payload.integrity ?? payload.integrityScore ?? 100)
-  const statusText = String(payload.status ?? '').toUpperCase()
+  const integrity = Number(data.integrity_post_breach ?? data.integrity ?? data.integrityScore ?? 100)
+  const statusText = String(data.status ?? '').toUpperCase()
   const isBreach = statusText === 'BREACH' || temperatureC < SAFE_MIN || temperatureC > SAFE_MAX
+  const score = Number(data.score ?? payload.score ?? 100)
+  const viability = Number(data.viability ?? payload.viability ?? 100)
+  const recommendation = String(data.recommendation ?? payload.recommendation ?? '')
+  const expiresInHours = Number(data.expires_in_hours ?? payload.expires_in_hours ?? -1)
 
   return {
-    id: String(payload.log_id ?? payload.id ?? payload.tx_index ?? payload.index ?? Date.now()),
-    timestamp: parseTimestamp(payload.timestamp ?? payload.time ?? payload.ts),
+    id: String(data.log_id ?? data.id ?? payload.tx_index ?? payload.index ?? Date.now()),
+    timestamp: parseTimestamp(data.timestamp ?? data.time ?? data.ts ?? payload.timestamp),
     temperatureRaw: rawTemp,
     temperatureC,
-    gps: String(payload.gps ?? payload.location ?? payload.coordinates ?? 'Unknown'),
+    gps: String(data.gps ?? data.location ?? data.coordinates ?? 'Unknown'),
     integrity: Number.isNaN(integrity) ? 100 : integrity,
     status: isBreach ? 'BREACH' : 'SAFE',
-    txHash: payload.tx_hash ?? payload.txHash,
-    blockHeight: payload.block_height ?? payload.blockNumber,
+    txHash: data.tx_hash ?? data.txHash,
+    blockHeight: data.block_height ?? data.blockNumber,
+    score: Number.isNaN(score) ? 100 : score,
+    viability: Number.isNaN(viability) ? 100 : viability,
+    recommendation,
+    expiresInHours: Number.isNaN(expiresInHours) ? -1 : expiresInHours,
   }
 }
 
@@ -67,6 +76,10 @@ export default function Dashboard() {
   const [selectedLog, setSelectedLog] = useState<BreachLogDetail | null>(null)
   const [currentTemp, setCurrentTemp] = useState<number | null>(null)
   const [integrityScore, setIntegrityScore] = useState(100)
+  const [slaScore, setSlaScore] = useState(100)
+  const [viability, setViability] = useState(100)
+  const [recommendation, setRecommendation] = useState('')
+  const [expiresInHours, setExpiresInHours] = useState<number | null>(null)
   const [breachCount, setBreachCount] = useState(0)
   const [toastMessage, setToastMessage] = useState<string | null>(null)
   const toastTimer = useRef<NodeJS.Timeout | null>(null)
@@ -94,6 +107,18 @@ export default function Dashboard() {
         setLogs((prev) => [log, ...prev])
         setCurrentTemp(log.temperatureC)
         setIntegrityScore(log.integrity)
+        if (log.score !== undefined) {
+          setSlaScore(log.score)
+        }
+        if (log.viability !== undefined) {
+          setViability(log.viability)
+        }
+        if (log.recommendation) {
+          setRecommendation(log.recommendation)
+        }
+        if (log.expiresInHours !== undefined && log.expiresInHours >= 0) {
+          setExpiresInHours(log.expiresInHours)
+        }
         if (log.status === 'BREACH') {
           setBreachCount((prev) => prev + 1)
           setToastMessage('Cold-chain breach detected. Ledger entry anchored.')
@@ -138,26 +163,33 @@ export default function Dashboard() {
       ? 'breach'
       : 'safe'
 
+  const getRecommendationStyle = (text: string) => {
+    const lower = text.toLowerCase()
+    if (lower.includes('destroy') || lower.includes('unsafe')) {
+      return { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-200', animate: true }
+    }
+    if (lower.includes('caution') || lower.includes('approaching')) {
+      return { bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-200', animate: false }
+    }
+    return { bg: 'bg-emerald-100', text: 'text-emerald-700', border: 'border-emerald-200', animate: false }
+  }
+
   const kpiCards = useMemo(() => ([
     {
-      label: 'Product Integrity Score',
-      value: integrityDisplay,
+      label: 'SLA Compliance Status',
+      value: `${slaScore.toFixed(2)}%`,
+      accent: 'text-blue-600',
+      background: 'from-blue-50 to-white',
+      icon: '🔗',
+    },
+    {
+      label: 'Biological Vaccine Viability',
+      value: `${viability.toFixed(2)}%`,
       accent: 'text-emerald-600',
       background: 'from-emerald-50 to-white',
+      icon: '🧪',
     },
-    {
-      label: 'Total Breaches Logged',
-      value: breachCount.toString(),
-      accent: 'text-rose-600',
-      background: 'from-rose-50 to-white',
-    },
-    {
-      label: 'Current Temperature',
-      value: currentTempDisplay,
-      accent: tempStatus === 'breach' ? 'text-rose-600' : 'text-emerald-600',
-      background: tempStatus === 'breach' ? 'from-rose-50 to-white' : 'from-emerald-50 to-white',
-    },
-  ]), [integrityDisplay, breachCount, currentTempDisplay, tempStatus])
+  ]), [slaScore, viability])
 
   return (
     <div className="flex h-screen bg-bg-primary">
@@ -175,20 +207,51 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               {kpiCards.map((card) => (
                 <div
                   key={card.label}
                   className={`rounded-xl border border-border-light bg-gradient-to-br ${card.background} p-6 shadow-card-shadow`}
                 >
-                  <p className="text-xs uppercase tracking-wide text-text-secondary mb-2">{card.label}</p>
-                  <p className={`text-3xl font-bold ${card.accent} ${tempStatus === 'breach' && card.label === 'Current Temperature' ? 'animate-pulse' : ''}`}>
+                  <p className="text-2xl mr-2 inline-block">{card.icon}</p>
+                  <p className="text-xs uppercase tracking-wide text-text-secondary mb-2 inline-block">{card.label}</p>
+                  <p className={`text-3xl font-bold ${card.accent} mt-3`}>
                     {card.value}
                   </p>
                   <p className="text-xs text-text-secondary mt-2">Updated live from telemetry stream.</p>
                 </div>
               ))}
             </div>
+
+            {(expiresInHours !== null || recommendation) && (
+              <div className="bg-white rounded-xl border border-border-light shadow-card-shadow p-6 mb-6">
+                <h3 className="text-lg font-semibold text-text-primary mb-4">Predictive Stability Metrics</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {expiresInHours !== null && (
+                    <div className="bg-bg-primary rounded-lg p-4">
+                      <p className="text-xs uppercase tracking-wide text-text-secondary mb-2">Estimated Shelf Life Remaining</p>
+                      <p className="text-2xl font-bold text-text-primary">{expiresInHours.toFixed(1)} Hours</p>
+                    </div>
+                  )}
+                  {recommendation && (
+                    <div className={`rounded-lg p-4 border ${
+                      getRecommendationStyle(recommendation).bg
+                    } ${
+                      getRecommendationStyle(recommendation).border
+                    } ${
+                      getRecommendationStyle(recommendation).animate ? 'animate-pulse' : ''
+                    }`}>
+                      <p className="text-xs uppercase tracking-wide mb-1 opacity-70">Clinical Recommendation</p>
+                      <p className={`text-sm font-semibold ${
+                        getRecommendationStyle(recommendation).text
+                      }`}>
+                        {recommendation}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-[2fr,1fr] gap-6">
               <div>

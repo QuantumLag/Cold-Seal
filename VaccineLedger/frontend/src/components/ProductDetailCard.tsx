@@ -12,6 +12,10 @@ export interface BreachLogDetail {
   status: 'SAFE' | 'BREACH'
   txHash?: string
   blockHeight?: number
+  score?: number
+  viability?: number
+  recommendation?: string
+  expiresInHours?: number
 }
 
 interface ProductDetailCardProps {
