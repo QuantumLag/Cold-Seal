@@ -1,25 +1,33 @@
 import { Outlet, NavLink } from 'react-router';
-import { LayoutDashboard, Package, BarChart3, Shield } from 'lucide-react';
+import { LayoutDashboard, Package, BarChart3, ShieldCheck, Snowflake, FileText, Gauge, Code, Settings } from 'lucide-react';
 
 export default function Layout() {
   const navItems = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/shipments', icon: Package, label: 'Shipments' },
-    { to: '/analytics', icon: BarChart3, label: 'Analytics' },
+    { to: '/shipments', icon: Package, label: 'Active Shipments' },
+    { to: '/analytics', icon: FileText, label: 'Blockchain Ledger Audits' },
+    { to: '/metrics', icon: Gauge, label: 'Node & Sensor Metrics' },
+    { to: '/contracts', icon: Code, label: 'Smart Contract Rules' },
+    { to: '/settings', icon: Settings, label: 'System Settings' },
   ];
 
   return (
     <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
       <div className="w-64 bg-white border-r border-border flex flex-col">
-        {/* Logo */}
+        {/* Logo with Cold-Seal Branding */}
         <div className="p-6 border-b border-border">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-black rounded-lg flex items-center justify-center">
-              <Shield className="w-5 h-5 text-white" />
+            <div className="relative w-10 h-10">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-lg flex items-center justify-center">
+                <div className="flex items-center justify-center relative">
+                  <ShieldCheck className="w-5 h-5 text-white absolute" style={{ filter: 'drop-shadow(0 0 2px rgba(0,0,0,0.3))' }} />
+                  <Snowflake className="w-3 h-3 text-white/80 absolute bottom-0 right-0" />
+                </div>
+              </div>
             </div>
             <div>
-              <h1 className="font-semibold">VaccineChain</h1>
+              <h1 className="font-semibold text-foreground">Cold-Seal</h1>
               <p className="text-xs text-muted-foreground">Cold Chain Monitor</p>
             </div>
           </div>
@@ -42,7 +50,7 @@ export default function Layout() {
                 }
               >
                 <item.icon className="w-5 h-5" />
-                <span>{item.label}</span>
+                <span className="text-sm">{item.label}</span>
               </NavLink>
             ))}
           </div>

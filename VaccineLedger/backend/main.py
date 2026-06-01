@@ -252,27 +252,35 @@ async def websocket_endpoint(websocket: WebSocket):
 @app.post("/api/update")
 async def update_data(data: dict):
     """
-    Endpoint for publisher.py (IoT sensor simulator) to push live telemetry data.
-    
-    Expected request body:
-    {
-        'temp': int (raw ×10),
-        'humidity': float,
-        'gps': string (e.g., "12.9716,77.5946"),
-        'status': string (e.g., "🚨 BREACH" or "✅ SAFE"),
-        'timestamp': string
-    }
+    Endpoint for edge monitoring devices to push live telemetry data.
     
     This endpoint:
-    1. Runs the native Python Arrhenius Degradation Model on the telemetry feed
-    2. Adds the current contractual blockchain integrity score
-    3. Logs temperature breaches to Ganache blockchain (if applicable)
-    4. Broadcasts the enriched payload to all WebSocket-connected Next.js dashboard clients
+    1. Normalizes data structures from both physical hardware and simulation feeds
+    2. Runs the native Python Arrhenius Degradation Model on the telemetry feed
+    3. Adds the current contractual blockchain integrity score
+    4. Logs temperature breaches to Ganache blockchain securely with explicit types
+    5. Broadcasts the enriched payload to all WebSocket-connected UI clients
     """
-    # 1. EXTRACT DATA & INTERPRET RAW FIELDS
-    temp_raw = data.get('temp', 0)
-    gps = data.get('gps', '0,0')
-    temp_celsius = temp_raw / 10.0  # Convert scaled integer (e.g., 55) back to float (5.5°C) for formulas
+    # 1. EXTRACT DATA & NORMALIZE POTENTIAL TYPE MISMATCHES
+    incoming_temp = data.get('temp', 0.0)
+    
+    # Auto-detect if incoming temp is a raw float (e.g., 5.6) or an unscaled integer (e.g., 5)
+    if isinstance(incoming_temp, float) or (incoming_temp > -20 and incoming_temp < 20):
+        temp_celsius = float(incoming_temp)
+        temp_raw = int(temp_celsius * 10)  # Scale to match uint256 contract constraints
+    else:
+        temp_raw = int(incoming_temp)
+        temp_celsius = temp_raw / 10.0
+
+    # Ensure the dictionary payload contains the scaled integer format for the dashboard UI
+    data['temp'] = temp_raw
+
+    # Compile hardware split-coordinate vectors (lat/lng) into a unified string structure
+    if 'lat' in data and 'lng' in data:
+        gps = f"{data['lat']:.6f},{data['lng']:.6f}"
+        data['gps'] = gps
+    else:
+        gps = data.get('gps', '0,0')
 
     # 2. RUN ARRHENIUS PREDICTIVE DEGRADATION CALCULATIONS
     try:
@@ -306,7 +314,9 @@ async def update_data(data: dict):
     if contract and (temp_raw < TEMP_MIN_RAW or temp_raw > TEMP_MAX_RAW):
         try:
             print(f"[/api/update] BREACH DETECTED: Temp={temp_celsius}°C. Recording violation to Ganache...")
-            tx_hash = contract.functions.logData(temp_raw, gps).transact({"from": w3.eth.accounts[0]})
+            
+            # Explicitly type cast both parameters to match contract signature rules: logData(uint256, string)
+            tx_hash = contract.functions.logData(int(temp_raw), str(gps)).transact({"from": w3.eth.accounts[0]})
             receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
             print(f"[/api/update] ⛓️  Breach logged at block {receipt['blockNumber']}")
             
@@ -317,7 +327,6 @@ async def update_data(data: dict):
             print(f"[/api/update] Blockchain write error: {e}")
     
     # 5. LIVE DISTRIBUTED BROADCAST OVER OPEN WEBSOCKET
-    # Next.js will catch all of these variables concurrently in real time!
     await manager.broadcast(data)
     
     return {
