@@ -2,34 +2,53 @@ import { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { mockShipments } from '../data/mockData';
 
+interface TelemetryPoint {
+  time: string;
+  temp: number;
+  humidity: number;
+}
+
 export default function Analytics() {
-  const [tempHistory, setTempHistory] = useState(() =>
-    Array.from({ length: 20 }, (_, i) => ({
-      id: `temp-${i}`,
-      time: `${20 - i}m`,
-      temp: 2 + Math.random() * 1.5,
-      humidity: 43 + Math.random() * 5
-    }))
-  );
+  const [tempHistory, setTempHistory] = useState<TelemetryPoint[]>([]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setTempHistory(prev => {
-        const newHistory = [...prev.slice(1)];
-        newHistory.push({
-          id: `temp-${Date.now()}`,
-          time: '0m',
-          temp: 2 + Math.random() * 2 - 0.5,
-          humidity: 43 + Math.random() * 6
-        });
-        return newHistory.map((item, i) => ({
-          ...item,
-          time: `${newHistory.length - i}m`
-        }));
-      });
-    }, 3000);
+    let cancelled = false;
 
-    return () => clearInterval(interval);
+    const loadHistory = async () => {
+      try {
+        const response = await fetch('http://127.0.0.1:8000/telemetry-history');
+        if (!response.ok) {
+          return;
+        }
+
+        const payload = await response.json();
+        const history = Array.isArray(payload.history) ? payload.history : [];
+
+        if (cancelled) {
+          return;
+        }
+
+        setTempHistory(
+          history.slice(-20).map((entry: { timestamp?: string; temp?: number; humidity?: number }, index: number) => ({
+            time: entry.timestamp || `${index + 1}`,
+            temp: entry.temp !== undefined ? entry.temp / 10 : 0,
+            humidity: entry.humidity !== undefined ? entry.humidity : 0,
+          }))
+        );
+      } catch (error) {
+        if (!cancelled) {
+          setTempHistory([]);
+        }
+      }
+    };
+
+    loadHistory();
+    const interval = setInterval(loadHistory, 3000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
   }, []);
 
   const qualityDistribution = [
@@ -52,7 +71,7 @@ export default function Analytics() {
         <div className="bg-white rounded-2xl p-6 shadow-sm">
           <div className="mb-6">
             <h3 className="font-semibold mb-1">Temperature Monitoring</h3>
-            <p className="text-sm text-muted-foreground">Real-time temperature data (last 20 minutes)</p>
+            <p className="text-sm text-muted-foreground">Recent temperature readings from live telemetry</p>
           </div>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={tempHistory}>
@@ -97,7 +116,7 @@ export default function Analytics() {
         <div className="bg-white rounded-2xl p-6 shadow-sm">
           <div className="mb-6">
             <h3 className="font-semibold mb-1">Humidity Monitoring</h3>
-            <p className="text-sm text-muted-foreground">Real-time humidity data (last 20 minutes)</p>
+            <p className="text-sm text-muted-foreground">Recent humidity readings from live telemetry</p>
           </div>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={tempHistory}>
