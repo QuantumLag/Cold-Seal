@@ -5,6 +5,8 @@
 #include <SPI.h>
 #include <SD.h>
 #include <Wire.h>
+#include <DHT.h>
+#include <MPU6050.h>
 #include "FS.h"
 #include "SPIFFS.h"
 
@@ -12,24 +14,16 @@
 #include "pins_and_objects.h"
 
 // Define Hardware Objects
-OneWire oneWire(DS18B20_PIN);
-DallasTemperature tempSensor(&oneWire);
 DHT dhtSensor(DHT_PIN, DHT_TYPE);
-Adafruit_BMP280 bmp280;
-BH1750 lightSensor;
 MPU6050 accelSensor;
 
 // Network Configurations
 const char* ssid = "Sk1+";
 const char* password = "sK@191107";
 
-// Your FastAPI server endpoint exposed to the local network
+// Hotspot IP Network Updates
 const char* serverEndpoint = "http://192.168.0.105:8000/api/update";
-
-// Your local Ganache RPC blockchain server address
 const char* blockchainEndpoint = "http://192.168.0.105:7545";
-
-// Public geolocation endpoint for fallback tracking vectors
 const char* geoEndpoint = "http://ip-api.com/json/";
 
 // Unified Timing Flags for Multiplexed Cadence Controls
@@ -79,12 +73,8 @@ void setup() {
     Serial.println("\n--- Initializing Integrated Cold-Chain Edge Intelligence ---");
 
     // Initialize Hardware Interfaces
-    tempSensor.begin();
     dhtSensor.begin();
-    Wire.begin(ACCEL_SDA, ACCEL_SCL);
-    
-    //if (!bmp280.begin(0x76)) Serial.println("Warning: BMP280 not detected.");
-    //if (!lightSensor.begin()) Serial.println("Warning: BH1750 not detected.");
+    Wire.begin(I2C_SDA, I2C_SCL);
     accelSensor.initialize();
     
     if (!SPIFFS.begin(true)) Serial.println("SPIFFS Mount Failed!");
@@ -119,24 +109,18 @@ void loop() {
         
         SensorReading mlSample = readAllSensors();
         if (validateReadings(mlSample)) {
-            // Append current environmental metrics to window buffer array structures
             mlDetector.addReading(mlSample.temperature, mlSample.humidity, mlSample.pressure, mlSample.light, mlSample.accel_magnitude);
-            
-            // Execute statistical variance evaluations over the updated timeline vector
             LightweightAnomalyDetector::AnomalyResult mlResult = mlDetector.detectAnomaly();
             
-            // Store results to latch onto outbound 5-second JSON payload packets
             currentAnomalyScore = mlResult.anomalyScore;
             currentIsAnomaly = mlResult.isAnomaly;
             currentStatusMessage = mlResult.reason;
 
-            // Instantly route emergency cryptographic anchor blocks if state breaks security boundaries
             if (currentIsAnomaly) {
                 Serial.println("⚠ CRITICAL RISK STATE DETECTED BY ML ENGINE! Initiating Blockchain Anchor...");
                 if (WiFi.status() == WL_CONNECTED) {
                     bool txSuccess = triggerBlockchainTransaction(mlSample.temperature, currentLat, currentLng, currentAnomalyScore, currentStatusMessage);
                     if (!txSuccess) {
-                        // Cascade payload to local flash arrays if RPC bridge times out
                         StaticJsonDocument<256> alertDoc;
                         alertDoc["alert"] = "Blockchain Tx Failed";
                         alertDoc["temp"] = mlSample.temperature;
@@ -164,15 +148,12 @@ void loop() {
         lastTelemetryStreamTime = currentMillis;
 
         SensorReading cleanReading = readAllSensors();
-        
         Serial.println("✓ Hardware verification checks cleared.");
         
-        // Routinely try fetching location coordinates if network drops re-connected
         if (WiFi.status() == WL_CONNECTED && currentLat == 0.0000) {
             updateLocationOnChip();
         }
 
-        // Construct Central Unified Telemetry Package containing active status variables
         StaticJsonDocument<512> doc;
         doc["lat"] = currentLat;
         doc["lng"] = currentLng;
@@ -189,11 +170,9 @@ void loop() {
         String payload;
         serializeJson(doc, payload);
 
-        // Transmit telemetry to FastAPI endpoints or write back logs securely to local file systems
         if (WiFi.status() == WL_CONNECTED) {
             bool webServerSuccess = sendTelemetryToServer(payload);
             if (webServerSuccess && !currentIsAnomaly) {
-                // Sync uncommitted structural records during idle periods
                 syncOfflineData();
             }
         } else {
@@ -207,32 +186,30 @@ SensorReading readAllSensors() {
     reading.timestamp = millis();
     reading.sensor_health = 0b11111; 
     
-    // 1. DS18B20 Temp
-    tempSensor.requestTemperatures();
-    reading.temperature = tempSensor.getTempCByIndex(0);
-    if (reading.temperature == -127.0 || reading.temperature == 85.0) {
-        // Fallback to DHT if DS18B20 isn't answering cleanly
-        reading.temperature = dhtSensor.readTemperature();
-        if (isnan(reading.temperature)) {
-            reading.temperature = 5.6; // Perfect default safe temperature baseline
-            reading.sensor_health &= ~(1 << 0);
-        }
+    // 1. Temperature via DHT11
+    reading.temperature = dhtSensor.readTemperature();
+    if (isnan(reading.temperature)) {
+        reading.temperature = 24.5; // Realistic backup ambient baseline
+        reading.sensor_health &= ~(1 << 0);
     }
     
-    // 2. DHT Humidity
+    // 2. Humidity via DHT11
     reading.humidity = dhtSensor.readHumidity();
     if (isnan(reading.humidity)) {
-        reading.humidity = 32.9; // Safe default humidity baseline
+        reading.humidity = 45.0; // Realistic backup humidity baseline
         reading.sensor_health &= ~(1 << 1);
     }
     
-    // 3. BMP280 Pressure (Hardware Missing Patch)
+    // 3. Pressure (Omitted - Not in physical setup)
     reading.pressure = 101325.0; 
     reading.sensor_health &= ~(1 << 2); 
     
-    // 4. BH1750 Light (Hardware Missing Patch)
-    reading.light = 350.0; 
-    reading.sensor_health &= ~(1 << 3); 
+    // 4. Light via Physical LDR (Analog Pin 34)
+    int rawLDR = analogRead(LDR_PIN);
+    reading.light = (float)rawLDR; 
+    if (rawLDR == 0 && LDR_PIN == 34) {
+         reading.sensor_health &= ~(1 << 3); 
+    }
     
     // 5. MPU6050 Accelerometer
     int16_t ax, ay, az;
