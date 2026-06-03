@@ -46,6 +46,8 @@ def run_sensor_simulation():
         live_payload = {
             "temp": int(temp_celsius * 10),  # Raw value (×10 scaled)
             "humidity": humidity_rh,          # Already a real float
+            "light": round(random.uniform(120.0, 420.0), 1),
+            "accel": round(random.uniform(0.95, 1.12), 2),
             "gps": gps_coords,
             "status": status,
             "timestamp": time.strftime("%H:%M:%S")

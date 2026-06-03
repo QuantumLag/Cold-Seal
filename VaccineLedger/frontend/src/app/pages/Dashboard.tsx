@@ -5,10 +5,20 @@ import { Link } from 'react-router';
 import QualityBadge from '../components/QualityBadge';
 import LiveTransitMap from '../components/LiveTransitMap';
 import { formatTimeOnly, formatDateTime } from '../utils/dateFormatter';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../components/ui/dropdown-menu';
 
 interface TelemetryData {
   temp?: number;
   humidity?: number;
+  light?: number;
+  accel?: number;
   gps?: string;
   status?: string;
   timestamp?: string;
@@ -27,6 +37,8 @@ export default function Dashboard() {
   const [latestData, setLatestData] = useState<TelemetryData>({
     temp: undefined,
     humidity: undefined,
+    light: undefined,
+    accel: undefined,
     gps: '0,0',
     status: 'System Starting...',
     timestamp: new Date().toISOString(),
@@ -70,6 +82,8 @@ export default function Dashboard() {
             const processedData: TelemetryData = {
               temp: data.temp,
               humidity: data.humidity,
+              light: data.light,
+              accel: data.accel,
               gps: data.gps || '0,0',
               status: data.status || '✅ SAFE',
               timestamp: data.timestamp || new Date().toISOString(),
@@ -254,6 +268,49 @@ export default function Dashboard() {
                 </div>
                 <div className="text-xs text-gray-500 mt-1">Relative Humidity</div>
               </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="rounded-xl border border-blue-100 bg-white/80 px-4 py-3 text-left shadow-sm transition hover:border-blue-200 hover:bg-white">
+                        <div className="text-xs uppercase tracking-wider text-gray-600 mb-1">Light</div>
+                        <div className="text-lg font-mono font-semibold">
+                          {latestData.light !== undefined ? `${latestData.light.toFixed(1)} lx` : 'N/A'}
+                        </div>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-56">
+                      <DropdownMenuLabel>Light Level</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem disabled className="opacity-100">
+                        Current: {latestData.light !== undefined ? `${latestData.light.toFixed(1)} lx` : 'N/A'}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem disabled className="opacity-100">
+                        Sensor: BH1750
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="rounded-xl border border-blue-100 bg-white/80 px-4 py-3 text-left shadow-sm transition hover:border-blue-200 hover:bg-white">
+                        <div className="text-xs uppercase tracking-wider text-gray-600 mb-1">Accelerometer</div>
+                        <div className="text-lg font-mono font-semibold">
+                          {latestData.accel !== undefined ? `${latestData.accel.toFixed(2)} g` : 'N/A'}
+                        </div>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-56">
+                      <DropdownMenuLabel>Accelerometer</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem disabled className="opacity-100">
+                        Magnitude: {latestData.accel !== undefined ? `${latestData.accel.toFixed(2)} g` : 'N/A'}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem disabled className="opacity-100">
+                        Sensor: MPU6050
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               <div>
                 <div className="text-xs uppercase tracking-wider text-gray-600 mb-1">Location</div>
                 <div className="text-lg font-mono font-semibold truncate">{latestData.gps || 'N/A'}</div>
@@ -302,6 +359,8 @@ export default function Dashboard() {
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Timestamp</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Temperature</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Humidity</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Light</th>
+                  <th className="text-left py-3 px-4 font-semibold text-gray-700">Accel</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">GPS Location</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
                   <th className="text-left py-3 px-4 font-semibold text-gray-700">SLA Score</th>
@@ -319,6 +378,12 @@ export default function Dashboard() {
                     </td>
                     <td className="py-3 px-4 font-mono">
                       {log.humidity !== undefined ? `${log.humidity.toFixed(1)}%` : 'N/A'}
+                    </td>
+                    <td className="py-3 px-4 font-mono">
+                      {log.light !== undefined ? `${log.light.toFixed(1)} lx` : 'N/A'}
+                    </td>
+                    <td className="py-3 px-4 font-mono">
+                      {log.accel !== undefined ? `${log.accel.toFixed(2)} g` : 'N/A'}
                     </td>
                     <td className="py-3 px-4 font-mono text-xs text-gray-600">{log.gps || 'N/A'}</td>
                     <td className="py-3 px-4">
