@@ -1,10 +1,8 @@
 import { Outlet, NavLink } from 'react-router';
 import { LayoutDashboard, Package, BarChart3, ShieldCheck, Snowflake, FileText, Gauge, Code, Settings } from 'lucide-react';
-
 export default function Layout() {
   const navItems = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/shipments', icon: Package, label: 'Active Shipments' },
     { to: '/analytics', icon: FileText, label: 'Blockchain Ledger Audits' },
     { to: '/metrics', icon: Gauge, label: 'Node & Sensor Metrics' },
     { to: '/contracts', icon: Code, label: 'Smart Contract Rules' },

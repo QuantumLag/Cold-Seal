@@ -137,6 +137,25 @@ def is_breach(temp_raw: int) -> bool:
     """Check if temperature is outside safe zone (2.0-8.0°C)"""
     return temp_raw < TEMP_MIN_RAW or temp_raw > TEMP_MAX_RAW
 
+def compute_cold_chain_status(temp_celsius: float) -> tuple[str, str]:
+    """
+    Authoritatively compute the cold chain status from temperature.
+    Based on WHO vaccine storage guidelines (2°C - 8°C safe zone).
+    Returns (status_emoji_string, breach_level)
+    """
+    if temp_celsius < 0.0:
+        return "❄️ FROZEN", "critical"        # Freeze damage — irreversible for many vaccines
+    elif temp_celsius < 2.0:
+        return "🥶 TOO COLD", "warning"        # Below safe zone, risk of freezing
+    elif temp_celsius <= 8.0:
+        return "✅ SAFE", "safe"               # WHO safe zone: 2–8°C
+    elif temp_celsius <= 15.0:
+        return "⚠️ WARNING", "warning"         # Mild excursion — accelerated degradation
+    elif temp_celsius <= 25.0:
+        return "🚨 BREACH", "critical"         # Significant breach — rapid degradation
+    else:
+        return "🔥 CRITICAL", "critical"       # Extreme heat — catastrophic degradation
+
 def fetch_integrity_score() -> dict:
     """Fetch current integrity score from blockchain (0-100%)"""
     if not contract:
@@ -285,6 +304,13 @@ async def update_data(data: dict):
         data['gps'] = gps
     else:
         gps = data.get('gps', '0,0')
+
+    # 1b. AUTHORITATIVE STATUS OVERRIDE — WHO Cold Chain Standard (2–8°C)
+    # Never trust the incoming status from hardware/publisher.
+    # The backend always computes the authoritative status from real temperature.
+    cold_status, breach_level = compute_cold_chain_status(temp_celsius)
+    data['status'] = cold_status
+    data['breach_level'] = breach_level
 
     # 2. RUN ARRHENIUS PREDICTIVE DEGRADATION CALCULATIONS
     try:

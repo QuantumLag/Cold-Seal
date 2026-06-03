@@ -6,6 +6,8 @@ interface TelemetryPoint {
   time: string;
   temp: number;
   humidity: number;
+  light: number;
+  accel: number;
 }
 
 export default function Analytics() {
@@ -29,10 +31,12 @@ export default function Analytics() {
         }
 
         setTempHistory(
-          history.slice(-20).map((entry: { timestamp?: string; temp?: number; humidity?: number }, index: number) => ({
+          history.slice(-20).map((entry: { timestamp?: string; temp?: number; humidity?: number; light?: number; accel?: number }, index: number) => ({
             time: entry.timestamp || `${index + 1}`,
             temp: entry.temp !== undefined ? entry.temp / 10 : 0,
             humidity: entry.humidity !== undefined ? entry.humidity : 0,
+            light: entry.light !== undefined ? entry.light : 0,
+            accel: entry.accel !== undefined ? entry.accel : 0,
           }))
         );
       } catch (error) {
@@ -153,6 +157,96 @@ export default function Analytics() {
                 labelStyle={{ color: '#737373', fontFamily: 'Inter', fontWeight: '500' }}
               />
               <Area type="monotone" dataKey="humidity" stroke="#06b6d4" fill="url(#humidityGradient)" strokeWidth={2} isAnimationActive={false} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Light Chart */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm">
+          <div className="mb-6">
+            <h3 className="font-semibold mb-1">Ambient Light Monitoring</h3>
+            <p className="text-sm text-muted-foreground">Recent light exposure readings (lux)</p>
+          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={tempHistory}>
+              <defs>
+                <linearGradient id="lightGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#eab308" stopOpacity={0.1}/>
+                  <stop offset="95%" stopColor="#eab308" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" vertical={false} />
+              <XAxis
+                dataKey="time"
+                stroke="#a3a3a3"
+                style={{ fontSize: '12px', fontFamily: 'Inter' }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                stroke="#a3a3a3"
+                style={{ fontSize: '12px', fontFamily: 'JetBrains Mono' }}
+                domain={[0, 1000]}
+                axisLine={false}
+                tickLine={false}
+                label={{ value: 'lx', position: 'insideLeft', style: { fontSize: '12px' } }}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #e5e5e5',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                }}
+                labelStyle={{ color: '#737373', fontFamily: 'Inter', fontWeight: '500' }}
+              />
+              <Area type="monotone" dataKey="light" stroke="#eab308" fill="url(#lightGradient)" strokeWidth={2} isAnimationActive={false} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Accelerometer Chart */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm">
+          <div className="mb-6">
+            <h3 className="font-semibold mb-1">Shock & Vibration Monitoring</h3>
+            <p className="text-sm text-muted-foreground">Recent accelerometer readings (g-force)</p>
+          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={tempHistory}>
+              <defs>
+                <linearGradient id="accelGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.1}/>
+                  <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f5" vertical={false} />
+              <XAxis
+                dataKey="time"
+                stroke="#a3a3a3"
+                style={{ fontSize: '12px', fontFamily: 'Inter' }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                stroke="#a3a3a3"
+                style={{ fontSize: '12px', fontFamily: 'JetBrains Mono' }}
+                domain={[0, 3]}
+                axisLine={false}
+                tickLine={false}
+                label={{ value: 'g', position: 'insideLeft', style: { fontSize: '12px' } }}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #e5e5e5',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                }}
+                labelStyle={{ color: '#737373', fontFamily: 'Inter', fontWeight: '500' }}
+              />
+              <Area type="monotone" dataKey="accel" stroke="#f43f5e" fill="url(#accelGradient)" strokeWidth={2} isAnimationActive={false} />
             </AreaChart>
           </ResponsiveContainer>
         </div>

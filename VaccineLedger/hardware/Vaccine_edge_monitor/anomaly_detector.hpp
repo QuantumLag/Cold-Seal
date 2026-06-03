@@ -17,19 +17,30 @@ private:
     
     // Evaluates spatial variance signature over the full reconstructed feature map
     float calculateWindowAnomalyScore(const double* flattenedFeatures) {
-        double absolute_variance_sum = 0.0;
-        
-        // Accumulate rolling Z-score variances across all 300 sequential window metrics
-        for (int i = 0; i < FEATURE_COUNT; i++) {
-            absolute_variance_sum += std::abs(flattenedFeatures[i]);
-        }
-        
-        // Normalize against vector size and transform to a standardized 0.0 - 1.0 boundary
-        double mean_deviation = absolute_variance_sum / (double)FEATURE_COUNT;
-        float anomaly_score = 1.0f - std::exp(-static_cast<float>(mean_deviation) * 0.65f);
-        
-        return anomaly_score;
+    double absolute_variance_sum = 0.0;
+    
+    // 1. Calculate standard pattern variance across the 60-min window
+    for (int i = 0; i < FEATURE_COUNT; i++) {
+        absolute_variance_sum += std::abs(flattenedFeatures[i]);
     }
+    double mean_deviation = absolute_variance_sum / (double)FEATURE_COUNT;
+    float base_anomaly_score = 1.0f - std::exp(-static_cast<float>(mean_deviation) * 0.65f);
+    
+    // 2. CRITICAL CORRECTION: Internal Bias Scaling
+    // Look at the very last temperature value in the flattened features array
+    // (index 295 is the most recent normalized temperature Z-Score)
+    float latest_temp_z = std::abs(flattenedFeatures[FEATURE_COUNT - 5]);
+    
+    // If the temperature is sitting more than 3 standard deviations away from 
+    // the Python-trained mean, we amplify the score inside the model.
+    if (latest_temp_z > 3.0f) {
+        // Linearly push the score towards 1.0 based on how far out of bounds it is
+        base_anomaly_score += (latest_temp_z - 3.0f) * 0.1f;
+        if (base_anomaly_score > 1.0f) base_anomaly_score = 1.0f;
+    }
+    
+    return base_anomaly_score;
+}
     
 public:
     void addReading(float temp, float humid, float pressure, float light, float accel) {

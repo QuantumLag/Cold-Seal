@@ -1,9 +1,10 @@
 import { createBrowserRouter } from "react-router";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
-import Shipments from "./pages/Shipments";
 import Analytics from "./pages/Analytics";
-import ShipmentDetail from "./pages/ShipmentDetail";
+import NodeMetrics from "./pages/NodeMetrics";
+import SmartContractRules from "./pages/SmartContractRules";
+import SystemSettings from "./pages/SystemSettings";
 
 export const router = createBrowserRouter([
   {
@@ -11,9 +12,10 @@ export const router = createBrowserRouter([
     Component: Layout,
     children: [
       { index: true, Component: Dashboard },
-      { path: "shipments", Component: Shipments },
-      { path: "shipments/:id", Component: ShipmentDetail },
       { path: "analytics", Component: Analytics },
+      { path: "metrics", Component: NodeMetrics },
+      { path: "contracts", Component: SmartContractRules },
+      { path: "settings", Component: SystemSettings },
     ],
   },
 ]);

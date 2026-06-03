@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Package, TrendingUp, AlertTriangle, CheckCircle2, Wifi, WifiOff } from 'lucide-react';
 import { mockShipments } from '../data/mockData';
-import { Link } from 'react-router';
-import QualityBadge from '../components/QualityBadge';
 import LiveTransitMap from '../components/LiveTransitMap';
 import { formatTimeOnly, formatDateTime } from '../utils/dateFormatter';
 import {
@@ -21,6 +19,7 @@ interface TelemetryData {
   accel?: number;
   gps?: string;
   status?: string;
+  breach_level?: string;
   timestamp?: string;
   score?: number;
   viability?: number;
@@ -85,7 +84,8 @@ export default function Dashboard() {
               light: data.light,
               accel: data.accel,
               gps: data.gps || '0,0',
-              status: data.status || '✅ SAFE',
+              status: data.status || '⏳ Connecting...',
+              breach_level: data.breach_level || 'safe',
               timestamp: data.timestamp || new Date().toISOString(),
               score: data.score !== undefined ? data.score : 100,
               viability: data.viability !== undefined ? data.viability : 100,
@@ -165,8 +165,6 @@ export default function Dashboard() {
 
   // Live clinical recommendation
   const clinicalRecommendation = latestData.recommendation || 'System online...';
-
-  const recentShipments = mockShipments.slice(0, 4);
 
   return (
     <div className="p-8">
@@ -327,6 +325,7 @@ export default function Dashboard() {
             <LiveTransitMap 
               gps={latestData.gps} 
               status={latestData.status} 
+              breach_level={latestData.breach_level}
               lastUpdate={formatTimeOnly(latestData.timestamp)} 
             />
           </div>
@@ -389,8 +388,10 @@ export default function Dashboard() {
                     <td className="py-3 px-4">
                       <span
                         className={`px-2 py-1 rounded text-xs font-medium ${
-                          log.status === '✅ SAFE'
+                          log.breach_level === 'safe'
                             ? 'bg-emerald-100 text-emerald-700'
+                            : log.breach_level === 'warning'
+                            ? 'bg-amber-100 text-amber-700'
                             : 'bg-red-100 text-red-700'
                         }`}
                       >
@@ -400,7 +401,10 @@ export default function Dashboard() {
                     <td className="py-3 px-4 font-mono font-semibold text-blue-600">
                       {log.score !== undefined ? `${log.score}%` : 'N/A'}
                     </td>
-                    <td className="py-3 px-4 font-mono font-semibold text-emerald-600">
+                    <td className={`py-3 px-4 font-mono font-semibold ${
+                      (log.viability ?? 100) >= 85 ? 'text-emerald-600' :
+                      (log.viability ?? 100) >= 70 ? 'text-amber-600' : 'text-red-600'
+                    }`}>
                       {log.viability !== undefined ? `${log.viability}%` : 'N/A'}
                     </td>
                   </tr>
@@ -411,42 +415,6 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Original Recent Shipments Section */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm mt-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="font-semibold">Recent Shipments</h2>
-          <Link to="/shipments" className="text-sm text-blue-600 hover:text-blue-700">
-            View all →
-          </Link>
-        </div>
-
-        <div className="space-y-4">
-          {recentShipments.map((shipment) => (
-            <Link
-              key={shipment.id}
-              to={`/shipments/${shipment.id}`}
-              className="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-1">
-                  <span className="font-mono font-medium">{shipment.id}</span>
-                  <QualityBadge score={shipment.qualityScore} size="sm" />
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {shipment.vaccineType} • {shipment.manufacturer} • {shipment.quantity.toLocaleString()}{' '}
-                  doses
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-medium">{shipment.currentLocation}</div>
-                <div className="text-xs text-muted-foreground">
-                  {shipment.currentTemp.toFixed(1)}°C • {shipment.currentHumidity.toFixed(1)}%
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
