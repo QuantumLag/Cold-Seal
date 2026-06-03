@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { mockShipments } from '../data/mockData';
 import SearchBar from '../components/SearchBar';
 import QualityBadge from '../components/QualityBadge';
+import { TEMPERATURE_SAFE_MAX_C, TEMPERATURE_SAFE_MIN_C, TEMPERATURE_WARNING_BUFFER_C } from '../utils/temperatureThresholds';
 
 export default function Shipments() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -75,8 +76,8 @@ export default function Shipments() {
               <div>
                 <div className="text-xs text-muted-foreground mb-1">Temperature</div>
                 <div className={`text-sm font-mono font-medium ${
-                  shipment.currentTemp > 3.5 || shipment.currentTemp < 1.5 ? 'text-red-500' :
-                  shipment.currentTemp > 3 || shipment.currentTemp < 2 ? 'text-amber-500' :
+                  shipment.currentTemp > TEMPERATURE_SAFE_MAX_C || shipment.currentTemp < TEMPERATURE_SAFE_MIN_C ? 'text-red-500' :
+                  shipment.currentTemp > TEMPERATURE_SAFE_MAX_C - TEMPERATURE_WARNING_BUFFER_C || shipment.currentTemp < TEMPERATURE_SAFE_MIN_C + TEMPERATURE_WARNING_BUFFER_C ? 'text-amber-500' :
                   'text-blue-600'
                 }`}>
                   {shipment.currentTemp.toFixed(1)}°C

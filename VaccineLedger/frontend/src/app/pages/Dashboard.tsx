@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Wifi, WifiOff } from 'lucide-react';
 import LiveTransitMap from '../components/LiveTransitMap';
 import { formatTimeOnly } from '../utils/dateFormatter';
+import { getTemperatureStatus, rawTemperatureToCelsius, TEMP_STATUS_SAFE, TEMPERATURE_SAFE_MAX_C, TEMPERATURE_SAFE_MIN_C } from '../utils/temperatureThresholds';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -74,7 +75,7 @@ export default function Dashboard() {
 
             // ==================== PARSE & UPDATE LIVE DATA ====================
             // Convert raw temp value (scaled by 10) to Celsius for display
-            const tempCelsius = data.temp !== undefined ? (data.temp / 10).toFixed(1) : undefined;
+            const tempCelsius = data.temp !== undefined ? rawTemperatureToCelsius(data.temp).toFixed(1) : undefined;
 
             const processedData: TelemetryData = {
               temp: data.temp,
@@ -82,7 +83,7 @@ export default function Dashboard() {
               light: data.light,
               accel: data.accel,
               gps: data.gps || '0,0',
-              status: data.status || '✅ SAFE',
+              status: data.temp !== undefined ? getTemperatureStatus(data.temp) : (data.status || TEMP_STATUS_SAFE),
               timestamp: data.timestamp || new Date().toISOString(),
               score: data.score !== undefined ? data.score : 100,
               viability: data.viability !== undefined ? data.viability : 100,
@@ -175,9 +176,11 @@ export default function Dashboard() {
               <div>
                 <div className="text-xs uppercase tracking-wider text-gray-600 mb-1">Temperature</div>
                 <div className="text-2xl font-mono font-semibold">
-                  {latestData.temp !== undefined ? `${(latestData.temp / 10).toFixed(1)}°C` : 'N/A'}
+                  {latestData.temp !== undefined ? `${rawTemperatureToCelsius(latestData.temp).toFixed(1)}°C` : 'N/A'}
                 </div>
-                <div className="text-xs text-gray-500 mt-1">Safe Range: 2.0 - 8.0°C</div>
+                <div className="text-xs text-gray-500 mt-1">
+                  Safe Range: {TEMPERATURE_SAFE_MIN_C.toFixed(1)} - {TEMPERATURE_SAFE_MAX_C.toFixed(1)}°C
+                </div>
               </div>
               <div>
                 <div className="text-xs uppercase tracking-wider text-gray-600 mb-1">Humidity</div>
@@ -292,7 +295,7 @@ export default function Dashboard() {
                       {formatTimeOnly(log.timestamp)}
                     </td>
                     <td className="py-3 px-4 font-mono font-semibold">
-                      {log.temp !== undefined ? `${(log.temp / 10).toFixed(1)}°C` : 'N/A'}
+                      {log.temp !== undefined ? `${rawTemperatureToCelsius(log.temp).toFixed(1)}°C` : 'N/A'}
                     </td>
                     <td className="py-3 px-4 font-mono">
                       {log.humidity !== undefined ? `${log.humidity.toFixed(1)}%` : 'N/A'}
@@ -307,7 +310,7 @@ export default function Dashboard() {
                     <td className="py-3 px-4">
                       <span
                         className={`px-2 py-1 rounded text-xs font-medium ${
-                          log.status === '✅ SAFE'
+                          log.status === TEMP_STATUS_SAFE
                             ? 'bg-emerald-100 text-emerald-700'
                             : 'bg-red-100 text-red-700'
                         }`}

@@ -4,6 +4,7 @@ import { mockShipments } from '../data/mockData';
 import ShipmentMap from '../components/ShipmentMap';
 import QualityBadge from '../components/QualityBadge';
 import { useState, useEffect } from 'react';
+import { TEMPERATURE_SAFE_MAX_C, TEMPERATURE_SAFE_MIN_C, TEMPERATURE_WARNING_BUFFER_C } from '../utils/temperatureThresholds';
 
 export default function ShipmentDetail() {
   const { id } = useParams();
@@ -30,8 +31,8 @@ export default function ShipmentDetail() {
   }
 
   const getStatusColor = (temp: number, humidity: number) => {
-    if (temp > 3.5 || temp < 1.5 || humidity > 48 || humidity < 42) return 'text-red-500';
-    if (temp > 3 || temp < 2 || humidity > 46 || humidity < 44) return 'text-amber-500';
+    if (temp > TEMPERATURE_SAFE_MAX_C || temp < TEMPERATURE_SAFE_MIN_C || humidity > 48 || humidity < 42) return 'text-red-500';
+    if (temp > TEMPERATURE_SAFE_MAX_C - TEMPERATURE_WARNING_BUFFER_C || temp < TEMPERATURE_SAFE_MIN_C + TEMPERATURE_WARNING_BUFFER_C || humidity > 46 || humidity < 44) return 'text-amber-500';
     return 'text-blue-600';
   };
 
