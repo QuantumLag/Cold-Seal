@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Package, TrendingUp, AlertTriangle, CheckCircle2, Wifi, WifiOff } from 'lucide-react';
-import { mockShipments } from '../data/mockData';
-import { Link } from 'react-router';
-import QualityBadge from '../components/QualityBadge';
+import { Wifi, WifiOff } from 'lucide-react';
 import LiveTransitMap from '../components/LiveTransitMap';
-import { formatTimeOnly, formatDateTime } from '../utils/dateFormatter';
+import { formatTimeOnly } from '../utils/dateFormatter';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -144,30 +141,6 @@ export default function Dashboard() {
     };
   }, []);
 
-  // ==================== CALCULATE LIVE METRICS ====================
-  // Use live data when available, fallback to mock data
-  const totalShipments = mockShipments.length;
-  const activeShipments = mockShipments.filter((s) => s.status === 'in-transit').length;
-  const totalViolations = mockShipments.reduce((acc, s) => acc + s.violations.length, 0);
-  const avgQuality = mockShipments.reduce((acc, s) => acc + s.qualityScore, 0) / totalShipments;
-
-  // Live blockchain compliance score
-  const blockchainScore = latestData.score !== undefined ? latestData.score : 100;
-
-  // Live vaccine viability from Arrhenius model
-  const vaccineViability = latestData.viability !== undefined ? latestData.viability : 100;
-
-  // Live shelf life from predictive model
-  const shelfLife =
-    latestData.expires_in_hours !== undefined
-      ? `${latestData.expires_in_hours} hours`
-      : 'Calculating...';
-
-  // Live clinical recommendation
-  const clinicalRecommendation = latestData.recommendation || 'System online...';
-
-  const recentShipments = mockShipments.slice(0, 4);
-
   return (
     <div className="p-8">
       {/* Header with Live Connection Status */}
@@ -190,61 +163,6 @@ export default function Dashboard() {
               </span>
             </>
           )}
-        </div>
-      </div>
-
-      {/* Real-Time Stats Grid - Bound to Live Data */}
-      <div className="grid grid-cols-4 gap-6 mb-8">
-        {/* Blockchain SLA Compliance */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border-l-4 border-blue-600">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
-              <Package className="w-5 h-5 text-blue-600" />
-            </div>
-          </div>
-          <div className="text-3xl font-semibold font-mono mb-1">
-            {latestData.score !== undefined ? `${latestData.score}.00%` : '100.00%'}
-          </div>
-          <div className="text-sm text-muted-foreground">SLA Compliance Score</div>
-          <div className="text-xs text-gray-500 mt-2">⛓️ Blockchain verified</div>
-        </div>
-
-        {/* Vaccine Viability - Arrhenius Model */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border-l-4 border-emerald-600">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-emerald-600" />
-            </div>
-          </div>
-          <div className="text-3xl font-semibold font-mono mb-1">
-            {latestData.viability !== undefined ? `${latestData.viability}%` : '100.00%'}
-          </div>
-          <div className="text-sm text-muted-foreground">Vaccine Viability</div>
-          <div className="text-xs text-gray-500 mt-2">🧬 Biological Health</div>
-        </div>
-
-        {/* Shelf Life Prediction */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border-l-4 border-amber-600">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5 text-amber-600" />
-            </div>
-          </div>
-          <div className="text-3xl font-semibold font-mono mb-1 truncate">{shelfLife}</div>
-          <div className="text-sm text-muted-foreground">Time to Expiry</div>
-          <div className="text-xs text-gray-500 mt-2">⏱️ Predictive Model</div>
-        </div>
-
-        {/* Clinical Recommendation */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border-l-4 border-cyan-600">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-10 h-10 bg-cyan-50 rounded-xl flex items-center justify-center">
-              <CheckCircle2 className="w-5 h-5 text-cyan-600" />
-            </div>
-          </div>
-          <div className="text-sm font-medium text-cyan-900 line-clamp-2">{clinicalRecommendation}</div>
-          <div className="text-sm text-muted-foreground mt-3">Clinical Recommendation</div>
-          <div className="text-xs text-gray-500 mt-2">💊 Usage Guidance</div>
         </div>
       </div>
 
@@ -411,42 +329,6 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Original Recent Shipments Section */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm mt-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="font-semibold">Recent Shipments</h2>
-          <Link to="/shipments" className="text-sm text-blue-600 hover:text-blue-700">
-            View all →
-          </Link>
-        </div>
-
-        <div className="space-y-4">
-          {recentShipments.map((shipment) => (
-            <Link
-              key={shipment.id}
-              to={`/shipments/${shipment.id}`}
-              className="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-1">
-                  <span className="font-mono font-medium">{shipment.id}</span>
-                  <QualityBadge score={shipment.qualityScore} size="sm" />
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {shipment.vaccineType} • {shipment.manufacturer} • {shipment.quantity.toLocaleString()}{' '}
-                  doses
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-medium">{shipment.currentLocation}</div>
-                <div className="text-xs text-muted-foreground">
-                  {shipment.currentTemp.toFixed(1)}°C • {shipment.currentHumidity.toFixed(1)}%
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

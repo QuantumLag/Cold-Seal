@@ -63,8 +63,6 @@ class ConnectionManager:
         {
             'temp': int (raw ×10, e.g., 55 = 5.5°C),
             'humidity': float (0-100%),
-            'light': float (lux),
-            'accel': float (g),
             'gps': string (e.g., "12.9716,77.5946"),
             'status': string (e.g., "🚨 BREACH" or "✅ SAFE"),
             'timestamp': string (ISO format or HH:MM:SS),
@@ -78,8 +76,6 @@ class ConnectionManager:
         sanitized = {
             'temp': message.get('temp', 0),
             'humidity': message.get('humidity', 0),
-            'light': message.get('light'),
-            'accel': message.get('accel'),
             'gps': message.get('gps', '0,0'),
             'status': message.get('status', ''),
             'timestamp': message.get('timestamp', datetime.now().isoformat()),
@@ -341,15 +337,8 @@ async def update_data(data: dict):
         "score": data.get('score'),
         "viability": data.get('viability'),
         "recommendation": data.get('recommendation'),
-        "expires_in_hours": data.get('expires_in_hours'),
-        "light": data.get('light'),
-        "accel": data.get('accel')
+        "expires_in_hours": data.get('expires_in_hours')
     }
-
-@app.get("/telemetry-history")
-async def get_telemetry_history():
-    """Get recent telemetry readings for analytics charts"""
-    return {"history": manager.message_queue[-100:]}
 
 @app.get("/api/status")
 async def get_status():
