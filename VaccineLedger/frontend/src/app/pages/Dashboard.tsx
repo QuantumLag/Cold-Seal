@@ -12,6 +12,8 @@ import {
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
 
+const DASHBOARD_STORAGE_KEY = 'vaccineledger-dashboard-telemetry';
+
 interface TelemetryData {
   temp?: number;
   humidity?: number;
@@ -30,25 +32,72 @@ interface LogEntry extends TelemetryData {
   id?: string;
 }
 
+interface PersistedDashboardState {
+  latestData: TelemetryData;
+  logs: LogEntry[];
+}
+
+const defaultTelemetryData: TelemetryData = {
+  temp: undefined,
+  humidity: undefined,
+  light: undefined,
+  accel: undefined,
+  gps: '0,0',
+  status: 'System Starting...',
+  timestamp: new Date().toISOString(),
+  score: 100,
+  viability: 100,
+  recommendation: 'Initializing...',
+  expires_in_hours: 0,
+};
+
+const isBrowser = typeof window !== 'undefined';
+
+function loadPersistedDashboardState(): PersistedDashboardState {
+  if (!isBrowser) {
+    return { latestData: defaultTelemetryData, logs: [] };
+  }
+
+  try {
+    const rawValue = window.localStorage.getItem(DASHBOARD_STORAGE_KEY);
+    if (!rawValue) {
+      return { latestData: defaultTelemetryData, logs: [] };
+    }
+
+    const parsedValue = JSON.parse(rawValue) as Partial<PersistedDashboardState>;
+    return {
+      latestData: parsedValue.latestData ?? defaultTelemetryData,
+      logs: Array.isArray(parsedValue.logs) ? parsedValue.logs : [],
+    };
+  } catch (error) {
+    console.warn('[Dashboard] Failed to restore persisted telemetry:', error);
+    return { latestData: defaultTelemetryData, logs: [] };
+  }
+}
+
+function savePersistedDashboardState(state: PersistedDashboardState) {
+  if (!isBrowser) {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(DASHBOARD_STORAGE_KEY, JSON.stringify(state));
+  } catch (error) {
+    console.warn('[Dashboard] Failed to persist telemetry:', error);
+  }
+}
+
 export default function Dashboard() {
   // ==================== REACT STATE ENGINE ====================
-  const [latestData, setLatestData] = useState<TelemetryData>({
-    temp: undefined,
-    humidity: undefined,
-    light: undefined,
-    accel: undefined,
-    gps: '0,0',
-    status: 'System Starting...',
-    timestamp: new Date().toISOString(),
-    score: 100,
-    viability: 100,
-    recommendation: 'Initializing...',
-    expires_in_hours: 0,
-  });
-
-  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const persistedState = loadPersistedDashboardState();
+  const [latestData, setLatestData] = useState<TelemetryData>(persistedState.latestData);
+  const [logs, setLogs] = useState<LogEntry[]>(persistedState.logs);
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    savePersistedDashboardState({ latestData, logs });
+  }, [latestData, logs]);
 
   // ==================== WEBSOCKET INITIALIZATION ====================
   useEffect(() => {
